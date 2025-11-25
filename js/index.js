@@ -641,9 +641,20 @@ function buildAudioProxyUrl(url) {
 }
 
 const SOURCE_OPTIONS = [
-    { value: "netease", label: "网易云音乐" },
-    { value: "kuwo", label: "酷我音乐" },
-    { value: "joox", label: "JOOX音乐" }
+    { value: "netease", label: "网易云" },
+    { value: "kuwo", label: "酷我" },
+    { value: "tencent", label: "QQ" },
+    { value: "joox", label: "JOOX" },
+    { value: "tidal", label: "tidal" },
+    { value: "spotify", label: "spotify" },
+    { value: "ytmusic", label: "ytmusic" },
+    { value: "qobuz", label: "qobuz" },
+    { value: "deezer", label: "deezer" },
+    { value: "apple", label: "apple" },
+    { value: "migu", label: "咪咕" },
+    { value: "kugou", label: "酷狗" },
+    { value: "ximalaya", label: "喜马拉雅" },
+    { value: "bilibili", label: "哔哩哔哩" },
 ];
 
 function normalizeSource(value) {
