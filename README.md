@@ -38,7 +38,7 @@
 3. 部署完成后，通过 Cloudflare Pages 分配的域名访问站点即可体验播放器。
 
 ## ⚙️ 配置提示
-- API 基地址定义在 index.html 中的 `API.baseUrl`（约 1300 行），可替换为自建接口域名。
+- API 基地址定义在 functions/proxy.ts 中的第1行，可替换为自建接口域名。
 - 默认主题、播放模式等偏好可在 `state` 初始化逻辑中按需调整。
 
 ### ☁️ Cloudflare D1 绑定与建表
