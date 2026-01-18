@@ -386,7 +386,7 @@ function createPersistentStorageClient() {
                     return false;
                 }
                 const result = await response.json().catch(() => ({}));
-                remoteAvailable = Boolean(result && result.d1Available);
+                remoteAvailable = Boolean(result && result.remoteAvailable);
                 return remoteAvailable;
             } catch (error) {
                 console.warn("检查远程存储可用性失败", error);
@@ -974,7 +974,7 @@ async function bootstrapPersistentStorage() {
     try {
         const remoteKeys = Array.from(STORAGE_KEYS_TO_SYNC);
         const snapshot = await persistentStorage.getItems(remoteKeys);
-        if (!snapshot || !snapshot.d1Available || !snapshot.data) {
+        if (!snapshot || !snapshot.remoteAvailable || !snapshot.data) {
             return;
         }
         applyPersistentSnapshotFromRemote(snapshot.data);

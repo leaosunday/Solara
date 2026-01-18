@@ -1,6 +1,6 @@
 # 🎶 Solara（光域）
 
-> 🌐 由轻量后端服务支撑的现代化网页音乐播放器，整合多种音乐聚合接口，覆盖搜索、播放与音频下载全流程。
+> 🌐 由 Node.js + SQLite 后端服务支撑的现代化网页音乐播放器，整合多种音乐聚合接口，覆盖搜索、播放与音频下载全流程。
 
 ![Review-ezgif com-optimize](https://github.com/user-attachments/assets/487157de-bf71-4bc9-9e49-16a4f0a14472)
 | | | |
@@ -19,56 +19,61 @@
 - 🎨 主题美学：内置亮/暗模式与玻璃拟态界面，根据当前曲目封面自动取色渲染沉浸式背景，具备沉浸体验。
 - 📱  竖屏移动端：全新竖屏布局匹配移动端手势与屏幕比例，按钮、列表与歌词均针对单手操作优化。
 - 🔍 跨站曲库检索：一键切换数据源，支持分页浏览并批量导入播放队列。
-- 📻 队列管理灵活：新增、删除、清空操作即时生效，并自动持久化到浏览器 localStorage。
+- 📻 队列管理灵活：新增、删除、清空操作即时生效，并自动持久化到本地 SQLite 数据库或浏览器 localStorage。
 - ❤️ 收藏列表：搜索结果与播放列表均可一键收藏，收藏列表拥有独立的播放进度、播放模式与批量操作面板。
 - 🔁 丰富的播放模式：列表循环、单曲循环与随机播放随手切换，记忆上次偏好。
 - 📝 动态歌词视图：逐行滚动高亮，当前行自动聚焦，手动滚动后短暂锁定视图。
 - 🔄 列表导入导出：支持播放队列与收藏列表统一导入/导出，可一键迁移或恢复收藏歌曲并同步到播放队列。
 - 📥 多码率下载：可挑选 128K / 192K / 320K / FLAC 等品质并直接获取音频文件。
-- ☁️ 轻量后端代理：通过 Cloudflare Pages Functions 统一聚合各数据源并处理音频跨域。
+- ☁️ Node.js 后端：统一聚合各数据源并处理音频跨域，使用 SQLite 持久化存储。
 - 🔒 锁屏播放控制：锁屏界面自动显示专辑封面与播放控件，无需解锁即可进行播放控制。
 - 🛠️ 调试控制台：按下 Ctrl + D 呼出实时日志面板，便于排查接口或交互异常。
 
 ## 🚀 快速上手
-根据使用的托管平台，推荐使用 Cloudflare Pages 进行部署：
 
-### ✅ Cloudflare Pages
-1. Fork 或克隆本仓库。
-2. 按照 Cloudflare Pages 文档创建站点，并将本仓库作为构建来源或直接上传静态资源。
-3. 部署完成后，通过 Cloudflare Pages 分配的域名访问站点即可体验播放器。
+本项目现在支持在任何支持 Node.js 的环境下运行。
+
+### 1. 克隆仓库
+```bash
+git clone https://github.com/your-username/Solara.git
+cd Solara
+```
+
+### 2. 安装依赖
+```bash
+npm install
+```
+
+### 3. 配置（可选）
+在根目录创建 `.env` 文件：
+```env
+PORT=3000
+PASSWORD=你的访问密码
+DB_PATH=solara.db
+```
+
+### 4. 启动服务
+```bash
+# 直接启动
+npm start
+
+# 开发模式（自动重载）
+npm run dev
+```
+
+启动后访问 `http://localhost:3000` 即可。
 
 ## ⚙️ 配置提示
-- API 基地址定义在 functions/proxy.ts 中的第1行，可替换为自建接口域名。
 - 默认主题、播放模式等偏好可在 `state` 初始化逻辑中按需调整。
-
-### ☁️ Cloudflare D1 绑定与建表
-1. 在 Cloudflare Dashboard 的 **Workers & Pages → D1 → Create** 中新建数据库，建议命名为 `solara-db`（名称可自定）。
-2. 打开 Pages 项目设置，依次进入 **Settings → Functions → Bindings → Add binding → D1 Database**：
-   - **Binding name** 填写 `DB`（必须与 `functions/api/storage.ts` 中的环境变量一致）。
-   - **D1 Database** 选择上一步创建的数据库并保存。
-3. 在数据库详情页切换到 **Query** 标签页，执行下方建表语句初始化两个独立的键值存储表（播放数据与收藏数据分离）：
-   ```sql
-   CREATE TABLE IF NOT EXISTS playback_store (
-     key TEXT PRIMARY KEY,
-     value TEXT,
-     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-   );
-
-   CREATE TABLE IF NOT EXISTS favorites_store (
-     key TEXT PRIMARY KEY,
-     value TEXT,
-     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-   );
-   ```
-4. 重新部署或预览站点。前端会优先检测 D1 绑定：播放状态、播放列表等写入 `playback_store`，收藏相关写入 `favorites_store`；未绑定时自动退回浏览器 localStorage。
+- 数据库会自动创建在 `solara.db`。
 
 ## 🧭 探索雷达
 - 探索雷达会在「流行、摇滚、古典音乐、民谣、电子、爵士、说唱、乡村、蓝调、R&B、金属、嘻哈、轻音乐」等分类中随机挑选关键词，自动为播放列表补充新歌。
 - 如果想排除某些不喜欢的分类，可在 `js/index.js` 中的 `EXPLORE_RADAR_GENRES` 数组里删除对应条目或新增自己喜欢的分类，保存后重新部署即可生效。
 
 ## 🔐 访问控制设置
-- **Cloudflare Pages：** 在项目的 **Settings → Functions → Environment variables** 中新增名为 `PASSWORD` 的环境变量，值为希望设置的访问口令。
-- 部署完成后，未登录的访问者会被自动重定向到 `/login` 页面并需输入该口令；若想关闭访问口令，删除该环境变量并重新部署即可。
+- 在环境变量中设置 `PASSWORD` 后，未登录的访问者会被自动重定向到 `/login` 页面并需输入该口令；若想关闭访问口令，不设置该环境变量即可。
+
 ## 🎵 使用流程
 1. 输入关键词并选择想要的曲库后发起搜索。
 2. 在结果列表中可试听、播放、下载或加入播放队列。
@@ -83,9 +88,9 @@
 - 点击封面可以切换到歌词面板，可通过点击展开/收起。
 
 ## ❓ 常见问题解答
-- **搜索没有结果怎么办？** 检查浏览器控制台日志，如接口被阻挡可尝试切换数据源或更新 `API.baseUrl` 至可用服务，很有可能是免费API炸了。
-- **如何重置本地数据？** 在浏览器开发者工具的 Application / Storage 面板清理 `localStorage`，即可恢复默认播放列表和配置。
-- **收藏或播放列表如何备份？** 使用播放队列或收藏列表顶部的「导出」按钮生成 JSON 文件，日后可通过对应列表的「导入」按钮恢复，同时可一键将收藏歌曲添加回播放列表。
+- **搜索没有结果怎么办？** 检查服务器控制台日志，如接口被阻挡可尝试切换数据源，很有可能是免费API炸了。
+- **如何重置本地数据？** 删除根目录下的 `solara.db` 文件，或在浏览器中清理 `localStorage`。
+- **收藏或播放列表如何备份？** 使用播放队列或收藏列表顶部的「导出」按钮生成 JSON 文件，日后可通过对应列表的「导入」按钮恢复。
 
 ## 🗂️ 项目结构
 ```
@@ -94,15 +99,15 @@ Music-Player/
 │   ├── desktop.css   # 桌面端布局与组件样式
 │   ├── mobile.css    # 移动端适配样式
 │   └── style.css     # 公共主题与变量定义
-├── functions/
-│   ├── _middleware.ts # Cloudflare Pages Functions 中间件
-│   ├── api/           # 各曲库代理函数入口
-│   ├── lib/           # 请求封装与工具模块
-│   ├── palette.ts     # 封面取色算法
-│   └── proxy.ts       # 音频直链代理
 ├── js/
 │   ├── index.js       # 播放器核心逻辑、状态管理与探索雷达分类
 │   └── mobile.js      # 移动端交互与事件处理
+├── lib/
+│   ├── jpeg-decoder.js # JPEG 解码逻辑 (调色板取色支持)
+│   └── palette.js      # 封面颜色分析与调色板生成算法
+├── server.js          # Node.js + Express 服务端 (SQLite, Proxy, Auth)
+├── package.json       # 项目依赖与脚本
+├── solara.db          # SQLite 数据库 (启动后自动生成)
 ├── favicon.png
 ├── favicon.svg
 ├── index.html         # 主界面结构、资源引入与配置项
