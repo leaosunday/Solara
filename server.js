@@ -40,50 +40,6 @@ app.use(cookieParser());
 // 静态文件服务
 app.use(express.static(path.join(__dirname)));
 
-// 鉴权中间件
-const isPublicPath = (pathname) => {
-  const publicPaths = ['/login', '/api/login', '/favicon.ico', '/favicon.png', '/favicon.svg'];
-  const publicExtensions = ['.css', '.js', '.png', '.svg', '.jpg', '.jpeg', '.gif', '.webp', '.woff', '.woff2'];
-  
-  if (publicPaths.includes(pathname)) return true;
-  return publicExtensions.some(ext => pathname.endsWith(ext));
-};
-
-app.use((req, res, next) => {
-  const password = process.env.PASSWORD;
-  if (!password || isPublicPath(req.path)) {
-    return next();
-  }
-
-  const authCookie = req.cookies.auth;
-  if (authCookie === Buffer.from(password).toString('base64')) {
-    return next();
-  }
-
-  res.redirect('/login');
-});
-
-// 登录接口
-app.post('/api/login', (req, res) => {
-  const { password } = req.body;
-  const passwordEnv = process.env.PASSWORD;
-
-  if (!passwordEnv || password === passwordEnv) {
-    if (passwordEnv) {
-      res.cookie('auth', Buffer.from(passwordEnv).toString('base64'), {
-        maxAge: 48 * 60 * 60 * 1000,
-        path: '/',
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: req.protocol === 'https'
-      });
-    }
-    return res.json({ success: true });
-  }
-
-  res.status(401).json({ success: false });
-});
-
 // 存储接口 (SQLite 替代原 Cloudflare D1)
 app.get('/api/storage', (req, res) => {
   const { status, keys: keysParam } = req.query;

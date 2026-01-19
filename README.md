@@ -48,11 +48,19 @@ npm install
 在根目录创建 `.env` 文件：
 ```env
 PORT=3000
-PASSWORD=你的访问密码
 DB_PATH=solara.db
+NAS_DOWNLOAD_DIR=downloads
 ```
 
-### 4. 启动服务
+### 4. Docker 部署 (推荐)
+支持多阶段构建，镜像精简高效。
+
+```bash
+# 启动服务
+docker-compose up -d
+```
+
+### 5. 直接启动
 ```bash
 # 直接启动
 npm start
@@ -65,14 +73,11 @@ npm run dev
 
 ## ⚙️ 配置提示
 - 默认主题、播放模式等偏好可在 `state` 初始化逻辑中按需调整。
-- 数据库会自动创建在 `solara.db`。
+- 数据库会自动创建在 `solara.db`，在 Docker 部署时会自动挂载到 `./data` 目录进行持久化。
 
 ## 🧭 探索雷达
 - 探索雷达会在「流行、摇滚、古典音乐、民谣、电子、爵士、说唱、乡村、蓝调、R&B、金属、嘻哈、轻音乐」等分类中随机挑选关键词，自动为播放列表补充新歌。
 - 如果想排除某些不喜欢的分类，可在 `js/index.js` 中的 `EXPLORE_RADAR_GENRES` 数组里删除对应条目或新增自己喜欢的分类，保存后重新部署即可生效。
-
-## 🔐 访问控制设置
-- 在环境变量中设置 `PASSWORD` 后，未登录的访问者会被自动重定向到 `/login` 页面并需输入该口令；若想关闭访问口令，不设置该环境变量即可。
 
 ## 🎵 使用流程
 1. 输入关键词并选择想要的曲库后发起搜索。
@@ -105,13 +110,14 @@ Music-Player/
 ├── lib/
 │   ├── jpeg-decoder.js # JPEG 解码逻辑 (调色板取色支持)
 │   └── palette.js      # 封面颜色分析与调色板生成算法
-├── server.js          # Node.js + Express 服务端 (SQLite, Proxy, Auth)
+├── server.js          # Node.js + Express 服务端 (SQLite, Proxy)
 ├── package.json       # 项目依赖与脚本
+├── Dockerfile         # Docker 镜像构建配置 (多阶段构建)
+├── docker-compose.yml # Docker Compose 部署配置
 ├── solara.db          # SQLite 数据库 (启动后自动生成)
 ├── favicon.png
 ├── favicon.svg
 ├── index.html         # 主界面结构、资源引入与配置项
-├── login.html         # 访问控制登录页
 └── README.md          # 项目说明
 ```
 

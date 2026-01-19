@@ -1,0 +1,20 @@
+services:
+  solara:
+    image: leaosunday/solara:latest
+    container_name: solara
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./downloads:/app/downloads # 改成你想要下载到nas的目录
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/app/data/solara.db
+      - NAS_DOWNLOAD_DIR=/app/downloads
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

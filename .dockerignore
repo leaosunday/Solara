@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+solara.db
+downloads
+.env
+.git
+.gitignore
+README.md
+Preview.gif
