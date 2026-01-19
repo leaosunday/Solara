@@ -206,14 +206,17 @@ app.get('/palette', async (req, res) => {
 
 // NAS 下载接口
 app.post('/api/nas-download', async (req, res) => {
-    const { url, filename } = req.body;
+    let { url, filename } = req.body;
     if (!url || !filename) return res.status(400).json({ error: 'Missing url or filename' });
+
+    // 清洗文件名，防止非法字符（尤其是 /）导致路径解析错误
+    const safeFilename = filename.replace(/[\/\\?%*:|"<>]/g, '-');
 
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
 
-        const filePath = path.join(NAS_DOWNLOAD_DIR, filename);
+        const filePath = path.join(NAS_DOWNLOAD_DIR, safeFilename);
         const fileStream = fs.createWriteStream(filePath);
         
         response.body.pipe(fileStream);
