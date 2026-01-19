@@ -11,6 +11,12 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 const dbPath = process.env.DB_PATH || 'solara.db';
+const NAS_DOWNLOAD_DIR = process.env.NAS_DOWNLOAD_DIR || path.join(__dirname, 'downloads');
+
+// 确保下载目录存在
+if (!fs.existsSync(NAS_DOWNLOAD_DIR)) {
+  fs.mkdirSync(NAS_DOWNLOAD_DIR, { recursive: true });
+}
 
 // 初始化数据库
 const db = new Database(dbPath);
@@ -239,6 +245,35 @@ app.get('/palette', async (req, res) => {
     } catch (error) {
         console.error('Palette generation failed:', error);
         res.status(500).json({ error: 'Failed to analyze image' });
+    }
+});
+
+// NAS 下载接口
+app.post('/api/nas-download', async (req, res) => {
+    const { url, filename } = req.body;
+    if (!url || !filename) return res.status(400).json({ error: 'Missing url or filename' });
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+
+        const filePath = path.join(NAS_DOWNLOAD_DIR, filename);
+        const fileStream = fs.createWriteStream(filePath);
+        
+        response.body.pipe(fileStream);
+
+        fileStream.on('finish', () => {
+            console.log(`File saved to NAS: ${filePath}`);
+            res.json({ success: true, path: filePath });
+        });
+
+        fileStream.on('error', (err) => {
+            console.error('File stream error:', err);
+            res.status(500).json({ error: 'Failed to save file to NAS' });
+        });
+    } catch (error) {
+        console.error('NAS download failed:', error);
+        res.status(500).json({ error: 'Failed to download file to NAS' });
     }
 });
 

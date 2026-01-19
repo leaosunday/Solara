@@ -716,7 +716,19 @@ body.background-transitioning .background-stage__layer--transition {
     box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
 }
 
-.search-result-actions .action-btn.download {
+.action-btn.nas-download {
+    background: #3498db;
+    padding: 4px 8px;
+    font-size: 10px;
+}
+
+.action-btn.nas-download:hover {
+    background: #2980b9;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.search-result-actions .action-btn.download,
+.search-result-actions .action-btn.nas-download {
     padding: 0;
     font-size: 14px;
 }
@@ -1155,7 +1167,7 @@ html.mobile-view .playlist-header .playlist-action-btn {
 
 .playlist-items .playlist-item {
     padding: 10px 12px;
-    padding-right: 110px;
+    padding-right: 140px;
     border-radius: 8px;
     transition: all 0.2s ease-in-out;
     cursor: pointer;
@@ -1180,6 +1192,7 @@ html.mobile-view .playlist-header .playlist-action-btn {
 
 .playlist-item-favorite,
 .playlist-item-download,
+.playlist-item-nas-download,
 .playlist-item-remove {
     position: absolute;
     top: 50%;
@@ -1201,16 +1214,17 @@ html.mobile-view .playlist-header .playlist-action-btn {
 
 .playlist-items .playlist-item:hover .playlist-item-favorite,
 .playlist-items .playlist-item:hover .playlist-item-download,
+.playlist-items .playlist-item:hover .playlist-item-nas-download,
 .playlist-items .playlist-item:hover .playlist-item-remove,
 .playlist-items .playlist-item:focus-within .playlist-item-favorite,
 .playlist-items .playlist-item:focus-within .playlist-item-download,
+.playlist-items .playlist-item:focus-within .playlist-item-nas-download,
 .playlist-items .playlist-item:focus-within .playlist-item-remove {
     opacity: 1;
 }
 
-
 .playlist-item-favorite {
-    right: 74px;
+    right: 106px;
     background: #ff4d67;
     color: #ffffff;
     border-color: rgba(255, 77, 103, 0.6);
@@ -1230,6 +1244,14 @@ html.mobile-view .playlist-header .playlist-action-btn {
 .playlist-item-favorite.is-active .fas,
 .playlist-item-favorite.is-active .far {
     color: #ffffff;
+}
+
+.playlist-item-nas-download {
+    right: 74px;
+    background: #3498db;
+    color: #ffffff;
+    border-color: rgba(52, 152, 219, 0.5);
+    box-shadow: 0 4px 10px rgba(52, 152, 219, 0.2);
 }
 
 .playlist-item-download {
@@ -1252,6 +1274,13 @@ html.mobile-view .playlist-header .playlist-action-btn {
 .playlist-items .playlist-item:focus-within .playlist-item-favorite {
     transform: translateY(-50%) scale(1.05);
     box-shadow: 0 8px 20px rgba(255, 77, 103, 0.35);
+    filter: brightness(1.05);
+}
+
+.playlist-item-nas-download:hover,
+.playlist-items .playlist-item:focus-within .playlist-item-nas-download {
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 8px 18px rgba(52, 152, 219, 0.25);
     filter: brightness(1.05);
 }
 
@@ -1315,7 +1344,7 @@ html.mobile-view .playlist-header .playlist-action-btn {
 }
 
 .favorites .playlist-items .playlist-item {
-    padding-right: 150px;
+    padding-right: 180px;
 }
 
 .favorite-item-action {
@@ -1336,8 +1365,13 @@ html.mobile-view .playlist-header .playlist-action-btn {
 }
 
 .favorite-item-action--add {
-    right: 74px;
+    right: 106px;
     background: var(--primary-color);
+}
+
+.favorite-item-action--nas-download {
+    right: 74px;
+    background: #3498db;
 }
 
 .favorite-item-action--download {
@@ -1969,6 +2003,49 @@ input[type="range"]:active::-moz-range-thumb {
     visibility: visible;
     transform: translateY(0);
     pointer-events: auto;
+}
+
+.quality-menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 5px 0;
+    opacity: 0.5;
+}
+
+.quality-option {
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-color);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quality-option:hover {
+    background: rgba(26, 188, 156, 0.1);
+    color: var(--primary-color);
+}
+
+.nas-option {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.nas-option i {
+    font-size: 14px;
+}
+
+.dynamic-quality-menu {
+    background: var(--component-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    min-width: 160px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
 }
 
 /* 加载更多按钮 - 增强样式 */

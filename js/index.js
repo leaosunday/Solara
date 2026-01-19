@@ -2922,6 +2922,10 @@ function setupInteractions() {
                 event.preventDefault();
                 event.stopPropagation();
                 showQualityMenu(event, index, "playlist");
+            } else if (action === "nas-download") {
+                event.preventDefault();
+                event.stopPropagation();
+                showQualityMenu(event, index, "playlist", true);
             }
         };
 
@@ -3008,6 +3012,10 @@ function setupInteractions() {
                 event.preventDefault();
                 event.stopPropagation();
                 showQualityMenu(event, index, "favorites");
+            } else if (action === "nas-download") {
+                event.preventDefault();
+                event.stopPropagation();
+                showQualityMenu(event, index, "favorites", true);
             } else if (action === "remove") {
                 event.preventDefault();
                 event.stopPropagation();
@@ -3773,6 +3781,18 @@ function createSearchResultItem(song, index) {
 
     actions.appendChild(favoriteButton);
     actions.appendChild(playButton);
+
+    const nasDownloadButton = document.createElement("button");
+    nasDownloadButton.className = "action-btn nas-download";
+    nasDownloadButton.type = "button";
+    nasDownloadButton.title = "下载到 NAS";
+    nasDownloadButton.innerHTML = '<i class="fas fa-hdd"></i>';
+    nasDownloadButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        showQualityMenu(event, index, "search", true);
+    });
+    actions.appendChild(nasDownloadButton);
+
     actions.appendChild(downloadButton);
 
     item.appendChild(selectionToggle);
@@ -4074,7 +4094,7 @@ function displaySearchResults(newItems, options = {}) {
 }
 
 // 显示质量选择菜单
-function showQualityMenu(event, index, type) {
+function showQualityMenu(event, index, type, isNas = false) {
     event.stopPropagation();
 
     // 移除现有的质量菜单
@@ -4085,12 +4105,12 @@ function showQualityMenu(event, index, type) {
 
     // 创建新的质量菜单
     const menu = document.createElement("div");
-    menu.className = "dynamic-quality-menu";
+    menu.className = "dynamic-quality-menu" + (isNas ? " nas-quality-menu" : "");
     menu.innerHTML = `
-        <div class="quality-option" onclick="downloadWithQuality(event, ${index}, '${type}', '128')">标准音质 (128k)</div>
-        <div class="quality-option" onclick="downloadWithQuality(event, ${index}, '${type}', '192')">高音质 (192k)</div>
-        <div class="quality-option" onclick="downloadWithQuality(event, ${index}, '${type}', '320')">超高音质 (320k)</div>
-        <div class="quality-option" onclick="downloadWithQuality(event, ${index}, '${type}', '999')">无损音质</div>
+        <div class="quality-option" onclick="downloadWithQuality(event, ${index}, '${type}', '128', ${isNas})">标准音质 (128k)</div>
+        <div class="quality-option" onclick="downloadWithQuality(event, ${index}, '${type}', '192', ${isNas})">高音质 (192k)</div>
+        <div class="quality-option" onclick="downloadWithQuality(event, ${index}, '${type}', '320', ${isNas})">超高音质 (320k)</div>
+        <div class="quality-option" onclick="downloadWithQuality(event, ${index}, '${type}', '999', ${isNas})">无损音质</div>
     `;
 
     // 设置菜单位置
@@ -4116,7 +4136,7 @@ function showQualityMenu(event, index, type) {
 }
 
 // 根据质量下载 - 支持播放列表模式
-async function downloadWithQuality(event, index, type, quality) {
+async function downloadWithQuality(event, index, type, quality, isNas = false) {
     event.stopPropagation();
     let song;
 
@@ -4146,10 +4166,56 @@ async function downloadWithQuality(event, index, type, quality) {
     }
 
     try {
-        await downloadSong(song, quality);
+        if (isNas) {
+            await downloadSongToNas(song, quality);
+        } else {
+            await downloadSong(song, quality);
+        }
     } catch (error) {
         console.error("下载失败:", error);
         showNotification("下载失败，请稍后重试", "error");
+    }
+}
+
+// 新增：下载歌曲到 NAS
+async function downloadSongToNas(song, quality = "320") {
+    try {
+        showNotification("正在请求 NAS 下载...");
+        const audioUrl = API.getSongUrl(song, quality);
+        const audioData = await API.fetchJson(audioUrl);
+
+        if (audioData && audioData.url) {
+            const url = audioData.url;
+            let fileExtension = "mp3";
+            try {
+                const urlObj = new URL(url);
+                const pathname = urlObj.pathname;
+                const ext = pathname.split(".").pop().toLowerCase();
+                if (ext && ["mp3", "flac", "m4a", "wav", "ogg"].includes(ext)) {
+                    fileExtension = ext;
+                }
+            } catch (e) {}
+
+            const filename = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(", ") : song.artist}.${fileExtension}`;
+
+            const response = await fetch("/api/nas-download", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url, filename }),
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showNotification("NAS 下载任务已开始", "success");
+            } else {
+                throw new Error(result.error || "NAS 下载失败");
+            }
+        } else {
+            throw new Error("无法获取下载地址");
+        }
+    } catch (error) {
+        console.error("NAS 下载失败:", error);
+        showNotification("NAS 下载失败，请检查后端配置", "error");
     }
 }
 
@@ -4520,6 +4586,9 @@ function renderPlaylist() {
             <button class="playlist-item-favorite action-btn favorite favorite-toggle" type="button" data-playlist-action="favorite" data-index="${index}" data-favorite-key="${songKey}" title="收藏" aria-label="收藏">
                 <i class="fa-regular fa-heart"></i>
             </button>
+            <button class="playlist-item-nas-download" type="button" data-playlist-action="nas-download" data-index="${index}" title="下载到 NAS">
+                <i class="fas fa-hdd"></i>
+            </button>
             <button class="playlist-item-download" type="button" data-playlist-action="download" data-index="${index}" title="下载">
                 <i class="fas fa-download"></i>
             </button>
@@ -4782,6 +4851,9 @@ function renderFavorites() {
             ${song.name} - ${artistValue}
             <button class="favorite-item-action favorite-item-action--add" type="button" data-favorite-action="add" data-index="${index}" title="添加到播放列表" aria-label="添加到播放列表">
                 <i class="fas fa-plus"></i>
+            </button>
+            <button class="favorite-item-action favorite-item-action--nas-download" type="button" data-favorite-action="nas-download" data-index="${index}" title="下载到 NAS" aria-label="下载到 NAS">
+                <i class="fas fa-hdd"></i>
             </button>
             <button class="favorite-item-action favorite-item-action--download" type="button" data-favorite-action="download" data-index="${index}" title="下载" aria-label="下载">
                 <i class="fas fa-download"></i>
@@ -5942,6 +6014,53 @@ async function downloadSong(song, quality = "320") {
     } catch (error) {
         console.error("下载失败:", error);
         showNotification("下载失败，请稍后重试", "error");
+    }
+}
+
+async function downloadSongToNas(song, quality = "320") {
+    try {
+        showNotification("正在推送下载到 NAS...");
+
+        const audioUrl = API.getSongUrl(song, quality);
+        const audioData = await API.fetchJson(audioUrl);
+
+        if (!audioData || !audioData.url) {
+            throw new Error("无法获取音频地址");
+        }
+
+        const preferredExtension = quality === "999" ? "flac" : quality === "740" ? "ape" : "mp3";
+        const fileExtension = (() => {
+            try {
+                const url = new URL(audioData.url);
+                const pathname = url.pathname || "";
+                const match = pathname.match(/\.([a-z0-9]+)$/i);
+                if (match) return match[1];
+            } catch (e) {}
+            return preferredExtension;
+        })();
+
+        const filename = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(", ") : song.artist}.${fileExtension}`;
+
+        const response = await fetch('/api/nas-download', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: audioData.url,
+                filename: filename
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showNotification("已成功推送至 NAS 下载队列", "success");
+        } else {
+            throw new Error(result.error || "NAS 下载失败");
+        }
+    } catch (error) {
+        console.error("NAS 下载失败:", error);
+        showNotification("推送至 NAS 失败，请检查服务器连接", "error");
     }
 }
 
