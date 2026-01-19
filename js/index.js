@@ -4197,11 +4197,12 @@ async function downloadSongToNas(song, quality = "320") {
             } catch (e) {}
 
             const filename = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(", ") : song.artist}.${fileExtension}`;
+            const picUrl = API.getPicUrl(song);
 
             const response = await fetch("/api/nas-download", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url, filename }),
+                body: JSON.stringify({ url, filename, song, picUrl }),
             });
 
             const result = await response.json();
@@ -6040,6 +6041,7 @@ async function downloadSongToNas(song, quality = "320") {
         })();
 
         const filename = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(", ") : song.artist}.${fileExtension}`;
+        const picUrl = API.getPicUrl(song);
 
         const response = await fetch('/api/nas-download', {
             method: 'POST',
@@ -6048,7 +6050,9 @@ async function downloadSongToNas(song, quality = "320") {
             },
             body: JSON.stringify({
                 url: audioData.url,
-                filename: filename
+                filename: filename,
+                song: song,
+                picUrl: picUrl
             })
         });
 

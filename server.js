@@ -5,6 +5,10 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const fetch = require('node-fetch');
 const fs = require('fs');
+const axios = require('axios');
+const NodeID3 = require('node-id3');
+const mm = require('music-metadata');
+const ffmpeg = require('fluent-ffmpeg');
 const { buildPalette } = require('./lib/palette');
 require('dotenv').config();
 
@@ -135,6 +139,194 @@ app.delete('/api/storage', (req, res) => {
 
 // Proxy 接口
 const API_BASE_URL = "https://music-api.gdstudio.xyz/api.php";
+
+async function embedMetadata(filePath, song, providedPicUrl) {
+    if (!song) return;
+    const fileExt = path.extname(filePath).toLowerCase();
+    const tempCoverPath = filePath + '.cover.jpg';
+    
+    try {
+        console.log(`Starting metadata embedding for: ${filePath}`);
+        
+        // 1. 获取封面图片
+        let imageBuffer = null;
+        
+        // 优先使用前端传来的经过代理处理的 URL，如果不可用则回退到拼接 URL
+        const signature = Math.random().toString(36).substring(2, 15);
+        const fallbackPicUrl = `${API_BASE_URL}?types=pic&id=${song.pic_id}&source=${song.source || "netease"}&size=300&s=${signature}`;
+        let picUrl = providedPicUrl || (song.pic_id ? fallbackPicUrl : null);
+
+        // 修复：如果 picUrl 是相对路径（如 /proxy...），转换为绝对路径
+        if (picUrl && picUrl.startsWith('/')) {
+            picUrl = `http://localhost:${port}${picUrl}`;
+        }
+
+        if (picUrl) {
+            try {
+                console.log(`Fetching cover from: ${picUrl}`);
+                // 根据用户提供的抓包信息，完美模拟浏览器 Headers
+                const imgRes = await axios.get(picUrl, { 
+                    responseType: 'arraybuffer', 
+                    timeout: 20000, // 增加到 20s，应对 3s 甚至更慢的加载
+                    headers: { 
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                        'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache',
+                        'Referer': 'http://localhost:3000/',
+                        'Sec-Ch-Ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
+                        'Sec-Ch-Ua-Mobile': '?0',
+                        'Sec-Ch-Ua-Platform': '"macOS"',
+                        'Sec-Fetch-Dest': 'image',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'cross-site'
+                    }
+                });
+                
+                const contentType = imgRes.headers['content-type'] || '';
+                let buffer = Buffer.from(imgRes.data);
+                
+                // 如果返回的是 JSON (某些源的 proxy 接口返回的是包含真实 URL 的 JSON)
+                if (contentType.includes('application/json') || (buffer.length < 1000 && buffer.toString().trim().startsWith('{'))) {
+                    try {
+                        const json = JSON.parse(buffer.toString());
+                        if (json.url) {
+                            console.log(`JSON response received, fetching real image URL: ${json.url}`);
+                            const realImgRes = await axios.get(json.url, {
+                                responseType: 'arraybuffer',
+                                timeout: 15000,
+                                headers: {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                    'Referer': json.url.includes('kuwo.cn') ? 'https://www.kuwo.cn/' : 'https://music.163.com/'
+                                }
+                            });
+                            buffer = Buffer.from(realImgRes.data);
+                            const realContentType = realImgRes.headers['content-type'];
+                            console.log(`Real image downloaded: ${buffer.length} bytes, type: ${realContentType}`);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse JSON cover response or fetch real image:', e.message);
+                    }
+                }
+
+                if (buffer.length > 1000) {
+                    imageBuffer = buffer;
+                    fs.writeFileSync(tempCoverPath, imageBuffer);
+                    console.log(`Cover image ready: ${imageBuffer.length} bytes`);
+                } else {
+                    console.warn(`Invalid cover image data: ${buffer.length} bytes.`);
+                }
+            } catch (err) {
+                console.warn(`Failed to fetch cover image from ${picUrl}:`, err.message);
+            }
+        }
+
+        // 2. 获取歌词
+        let lyric = '';
+        if (song.lyric_id || song.id) {
+            const signature = Math.random().toString(36).substring(2, 15);
+            const lrcUrl = `${API_BASE_URL}?types=lyric&id=${song.lyric_id || song.id}&source=${song.source || "netease"}&s=${signature}`;
+            try {
+                const lrcRes = await axios.get(lrcUrl, { timeout: 10000 });
+                if (lrcRes.data && lrcRes.data.lyric) {
+                    lyric = lrcRes.data.lyric;
+                    console.log(`Lyrics fetched: ${lyric.length} characters`);
+                }
+            } catch (err) {
+                console.warn('Failed to fetch lyrics:', err.message);
+            }
+        }
+
+        const artistStr = Array.isArray(song.artist) ? song.artist.join(', ') : (song.artist || '');
+
+        // 3. 根据格式嵌入元数据
+        if (fileExt === '.mp3') {
+            const tags = {
+                title: song.name,
+                artist: artistStr,
+                album: song.album || '',
+                unsynchronisedLyrics: {
+                    language: 'eng',
+                    text: lyric
+                }
+            };
+            if (imageBuffer) {
+                tags.image = {
+                    mime: "image/jpeg",
+                    type: { id: 3, name: 'front cover' },
+                    description: 'front cover',
+                    imageBuffer: imageBuffer
+                };
+            }
+            // 尝试使用 ID3v2.3 增加兼容性
+            const success = NodeID3.write(tags, filePath);
+            console.log(`MP3 Metadata write result: ${success}`);
+        } else if (['.flac', '.m4a', '.ogg', '.wav', '.ape'].includes(fileExt)) {
+            const tempOutputPath = filePath + '.meta' + fileExt;
+            const hasCover = fs.existsSync(tempCoverPath);
+            
+            // 构建 ffmpeg 命令
+            let command = ffmpeg(filePath);
+            
+            if (hasCover) {
+                command = command.input(tempCoverPath);
+            }
+
+            // 基础元数据设置
+            command = command
+                .outputOptions('-metadata', `title=${song.name}`)
+                .outputOptions('-metadata', `artist=${artistStr}`)
+                .outputOptions('-metadata', `album=${song.album || ''}`);
+
+            if (lyric) {
+                // FLAC 歌词标签：LYRICS 是标准，UNSYNCEDLYRICS 增加兼容性
+                command = command.outputOptions('-metadata', `LYRICS=${lyric}`);
+                command = command.outputOptions('-metadata', `UNSYNCEDLYRICS=${lyric}`);
+                command = command.outputOptions('-metadata', `comment=${lyric}`);
+            }
+
+            if (hasCover) {
+                // 映射音频和封面
+                command = command.outputOptions('-map', '0:a');
+                command = command.outputOptions('-map', '1:0');
+                // 设置封面属性
+                command = command.outputOptions('-disposition:v:0', 'attached_pic');
+            } else {
+                command = command.outputOptions('-map', '0:a');
+            }
+
+            // 执行转换
+            await new Promise((resolve, reject) => {
+                command
+                    .outputOptions('-c', 'copy')
+                    .on('end', () => {
+                        if (fs.existsSync(tempOutputPath)) {
+                            fs.renameSync(tempOutputPath, filePath);
+                            console.log(`${fileExt} Metadata embedded successfully`);
+                        }
+                        resolve();
+                    })
+                    .on('error', (err) => {
+                        console.error(`ffmpeg error for ${fileExt}:`, err.message);
+                        if (fs.existsSync(tempOutputPath)) fs.unlinkSync(tempOutputPath);
+                        resolve(); // 即使失败也继续，不阻塞下载流
+                    })
+                    .save(tempOutputPath);
+            });
+        } else {
+            console.log(`Unsupported file extension for embedding: ${fileExt}`);
+        }
+    } catch (error) {
+        console.error('Metadata embedding failed:', error);
+    } finally {
+        // 清理临时封面文件
+        if (fs.existsSync(tempCoverPath)) {
+            try { fs.unlinkSync(tempCoverPath); } catch(e) {}
+        }
+    }
+}
+
 app.get('/proxy', async (req, res) => {
   const targetUrl = req.query.target;
   
@@ -206,7 +398,7 @@ app.get('/palette', async (req, res) => {
 
 // NAS 下载接口
 app.post('/api/nas-download', async (req, res) => {
-    let { url, filename } = req.body;
+    let { url, filename, song, picUrl } = req.body;
     if (!url || !filename) return res.status(400).json({ error: 'Missing url or filename' });
 
     // 清洗文件名，防止非法字符（尤其是 /）导致路径解析错误
@@ -221,8 +413,12 @@ app.post('/api/nas-download', async (req, res) => {
         
         response.body.pipe(fileStream);
 
-        fileStream.on('finish', () => {
+        fileStream.on('finish', async () => {
             console.log(`File saved to NAS: ${filePath}`);
+            
+            // 嵌入元数据，增加 picUrl 参数
+            await embedMetadata(filePath, song, picUrl);
+            
             res.json({ success: true, path: filePath });
         });
 
