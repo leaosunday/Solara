@@ -4117,6 +4117,7 @@ function displaySearchResults(newItems, options = {}) {
         container.innerHTML = "<div style=\"text-align: center; color: var(--text-secondary-color); padding: 20px;\">未找到相关歌曲</div>";
         state.renderedSearchCount = 0;
         debugLog("显示搜索结果: 0 个结果, 无可用数据");
+        updateImportSelectedButton();
         return;
     }
 
@@ -4138,9 +4139,8 @@ function displaySearchResults(newItems, options = {}) {
         container.appendChild(fragment);
         state.renderedSearchCount += itemsToAppend.length;
         
-        if (isAllSelected) {
-            updateImportSelectedButton();
-        }
+        // 始终更新导入和全选按钮状态，确保全选按钮在有结果时可用
+        updateImportSelectedButton();
     }
 
     if (state.hasMoreResults) {
