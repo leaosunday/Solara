@@ -78,6 +78,13 @@ const dom = {
     importFavoritesInput: document.getElementById("importFavoritesInput"),
     clearFavoritesBtn: document.getElementById("clearFavoritesBtn"),
     currentFavoriteToggle: document.getElementById("currentFavoriteToggle"),
+    discoveryModal: document.getElementById("discoveryModal"),
+    discoverySongsList: document.getElementById("discoverySongsList"),
+    discoveryGenreInfo: document.getElementById("discoveryGenreInfo"),
+    confirmDiscovery: document.getElementById("confirmDiscovery"),
+    cancelDiscovery: document.getElementById("cancelDiscovery"),
+    closeDiscoveryModal: document.getElementById("closeDiscoveryModal"),
+    discoveryOverlay: document.querySelector("#discoveryModal .modal-overlay"),
 };
 
 window.SolaraDom = dom;
@@ -5820,8 +5827,50 @@ async function exploreOnlineMusic() {
             return;
         }
 
-        state.playlistSongs = appendedSongs.concat(existingSongs);
-        state.currentTrackIndex = (state.currentTrackIndex ?? -1) + appendedSongs.length;
+        // 显示预览弹窗
+        showDiscoveryPreview(appendedSongs, randomGenre);
+
+    } catch (error) {
+        console.error("探索雷达错误:", error);
+        showNotification("探索雷达获取失败，请稍后重试", "error");
+    } finally {
+        setLoadingState(false);
+    }
+}
+
+// 显示探索雷达预览弹窗
+function showDiscoveryPreview(songs, genre) {
+    const modal = dom.discoveryModal;
+    const listContainer = dom.discoverySongsList;
+    const infoContainer = dom.discoveryGenreInfo;
+
+    if (!modal || !listContainer) return;
+
+    // 设置类型信息
+    if (infoContainer) {
+        infoContainer.textContent = `本次为您随机探索到 ${songs.length} 首「${genre}」风格的歌曲：`;
+    }
+
+    // 渲染歌曲列表
+    listContainer.innerHTML = songs.map(song => `
+        <div class="discovery-song-item">
+            <div class="discovery-song-info">
+                <span class="discovery-song-name">${song.name}</span>
+                <span class="discovery-song-artist">${song.artist}</span>
+            </div>
+        </div>
+    `).join("");
+
+    // 绑定确认按钮（使用一次性监听器或清除之前的监听器）
+    const confirmBtn = dom.confirmDiscovery;
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    dom.confirmDiscovery = newConfirmBtn;
+
+    newConfirmBtn.addEventListener("click", async () => {
+        const existingSongs = Array.isArray(state.playlistSongs) ? state.playlistSongs.slice() : [];
+        state.playlistSongs = songs.concat(existingSongs);
+        state.currentTrackIndex = (state.currentTrackIndex ?? -1) + songs.length;
         state.onlineSongs = state.playlistSongs.slice();
         state.currentPlaylist = "playlist";
         state.currentList = "playlist";
@@ -5829,8 +5878,8 @@ async function exploreOnlineMusic() {
         renderPlaylist();
         updatePlaylistHighlight();
 
-        showNotification(`探索雷达：新增${appendedSongs.length}首 ${randomGenre} 歌曲`);
-        debugLog(`探索雷达加载成功，关键词：${randomGenre}，音源：${source}，新增歌曲数：${appendedSongs.length}`);
+        showNotification(`探索雷达：已添加 ${songs.length} 首歌曲到播放列表`);
+        hideDiscoveryModal();
 
         const shouldAutoplay = existingSongs.length === 0 && state.playlistSongs.length > 0;
         if (shouldAutoplay) {
@@ -5838,11 +5887,26 @@ async function exploreOnlineMusic() {
         } else {
             savePlayerState();
         }
-    } catch (error) {
-        console.error("探索雷达错误:", error);
-        showNotification("探索雷达获取失败，请稍后重试", "error");
-    } finally {
-        setLoadingState(false);
+    });
+
+    // 绑定取消和关闭按钮
+    const closeBtns = [dom.cancelDiscovery, dom.closeDiscoveryModal, dom.discoveryOverlay];
+    closeBtns.forEach(btn => {
+        if (btn) {
+            btn.onclick = hideDiscoveryModal;
+        }
+    });
+
+    // 显示弹窗
+    modal.hidden = false;
+    modal.classList.add("show");
+}
+
+function hideDiscoveryModal() {
+    const modal = dom.discoveryModal;
+    if (modal) {
+        modal.hidden = true;
+        modal.classList.remove("show");
     }
 }
 

@@ -358,7 +358,8 @@ app.get('/proxy', async (req, res) => {
   try {
     const response = await fetch(url.toString(), {
       headers: {
-        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0'
+        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
+        'Referer': 'https://music.gdstudio.xyz/'
       }
     });
     const data = await response.text();

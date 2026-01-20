@@ -513,6 +513,25 @@
 <!-- 调试信息容器 -->
 <div id="debugInfo" class="debug-info"></div>
 
+<!-- 探索雷达预览弹窗 -->
+<div id="discoveryModal" class="modal" hidden>
+    <div class="modal-overlay"></div>
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title">探索雷达预览</h3>
+            <button class="modal-close" id="closeDiscoveryModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="discoveryGenreInfo" class="discovery-genre-info"></div>
+            <div id="discoverySongsList" class="discovery-songs-list"></div>
+        </div>
+        <div class="modal-footer">
+            <button id="cancelDiscovery" class="modal-btn modal-btn--secondary">取消</button>
+            <button id="confirmDiscovery" class="modal-btn modal-btn--primary">确认添加</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="js/index.js"></script>
 <script>

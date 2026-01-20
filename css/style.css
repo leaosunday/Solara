@@ -2237,6 +2237,172 @@ input[type="range"]:active::-moz-range-thumb {
     display: none;
 }
 
+/* 弹窗基础样式 */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: none; /* 默认隐藏 */
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal.show {
+    display: flex; /* 显式指定为 flex */
+}
+
+.modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.modal-container {
+    position: relative;
+    background: var(--component-bg);
+    backdrop-filter: blur(var(--backdrop-blur));
+    width: 100%;
+    max-width: 500px;
+    max-height: 80vh;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modal-in 0.3s ease-out;
+}
+
+@keyframes modal-in {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary-color);
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: var(--warning-color);
+}
+
+.modal-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.discovery-genre-info {
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: var(--item-hover-bg);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.discovery-songs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.discovery-song-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    transition: background 0.2s;
+}
+
+.discovery-song-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.discovery-song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.discovery-song-name {
+    display: block;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.discovery-song-artist {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-btn {
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.modal-btn--secondary {
+    background: var(--border-color);
+    color: var(--text-color);
+}
+
+.modal-btn--secondary:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.modal-btn--primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.modal-btn--primary:hover {
+    background: var(--primary-color-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
+}
+
 .mobile-panel {
     display: contents;
 }
