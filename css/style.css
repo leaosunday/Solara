@@ -389,7 +389,7 @@ body.background-transitioning .background-stage__layer--transition {
 
 .search-results-toolbar {
     display: flex !important;
-    justify-content: flex-end;
+    justify-content: flex-start;
     align-items: center;
     gap: 8px;
     padding-top: 12px;
@@ -540,9 +540,9 @@ body.background-transitioning .background-stage__layer--transition {
 }
 
 .search-result-select {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    border-radius: 35%;
     border: 1px solid rgba(255, 255, 255, 0.4);
     background: rgba(255, 255, 255, 0.65);
     color: transparent;
@@ -641,7 +641,8 @@ body.background-transitioning .background-stage__layer--transition {
 }
 
 
-.import-selected-btn {
+.import-selected-btn,
+.select-all-btn {
     display: inline-flex;
     flex-direction: row;
     align-items: center;
@@ -656,22 +657,33 @@ body.background-transitioning .background-stage__layer--transition {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    transition: all 0.2s ease;
     box-shadow: 0 10px 24px rgba(26, 188, 156, 0.25);
 }
 
-.import-selected-btn:disabled {
+.select-all-btn {
+    background: #34495e;
+    box-shadow: 0 10px 24px rgba(52, 73, 94, 0.25);
+}
+
+.select-all-btn.all-selected {
+    background: #e67e22;
+    box-shadow: 0 10px 24px rgba(230, 126, 34, 0.25);
+}
+
+.import-selected-btn:disabled,
+.select-all-btn:disabled {
     cursor: not-allowed;
     background: rgba(127, 140, 141, 0.5);
     box-shadow: none;
-    filter: none;
+    filter: grayscale(1);
+    opacity: 0.7;
 }
 
 .import-selected-btn:not(:disabled):hover,
-.import-selected-btn:not(:disabled):focus-visible {
+.select-all-btn:not(:disabled):hover {
     transform: translateY(-1px);
-    box-shadow: 0 14px 30px rgba(26, 188, 156, 0.32);
-    filter: brightness(1.05);
+    filter: brightness(1.1);
 }
 
 .import-selected-btn:focus-visible {

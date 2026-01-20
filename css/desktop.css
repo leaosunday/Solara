@@ -65,20 +65,24 @@ html.desktop-view .search-results {
 }
 
 html.desktop-view .search-results-toolbar {
-    display: block;
-    padding: 0;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
     height: 0;
     overflow: visible;
     pointer-events: none;
 }
 
-html.desktop-view .search-results-toolbar .import-selected-btn {
-    position: absolute;
-    top: 16px;
-    right: 20px;
+html.desktop-view .search-results-toolbar > * {
     pointer-events: auto;
 }
 
+html.desktop-view .search-results-toolbar .import-selected-btn {
+    position: static;
+}
+
 html.desktop-view .search-results-list {
-    padding-top: 60px;
+    padding-top: 15px;
 }

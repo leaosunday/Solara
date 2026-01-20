@@ -33,6 +33,7 @@ const dom = {
     importSelectedBtn: document.getElementById("importSelectedBtn"),
     importSelectedCount: document.getElementById("importSelectedCount"),
     importSelectedMenu: document.getElementById("importSelectedMenu"),
+    selectAllBtn: document.getElementById("selectAllBtn"),
     importToPlaylist: document.getElementById("importToPlaylist"),
     importToFavorites: document.getElementById("importToFavorites"),
     importPlaylistBtn: document.getElementById("importPlaylistBtn"),
@@ -3257,6 +3258,14 @@ function setupInteractions() {
         });
     }
 
+    if (dom.selectAllBtn) {
+        dom.selectAllBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            selectAllSearchResults();
+        });
+    }
+
     if (dom.importSelectedBtn) {
         dom.importSelectedBtn.addEventListener("click", (event) => {
             event.preventDefault();
@@ -3862,6 +3871,17 @@ function updateImportSelectedButton() {
     const label = count > 0 ? `导入已选 (${count})` : "导入已选";
     button.title = label;
     button.setAttribute("aria-label", count > 0 ? `导入已选 ${count} 首歌曲` : "导入已选");
+
+    // 同步更新全选按钮状态
+    const selectAllBtn = dom.selectAllBtn;
+    if (selectAllBtn) {
+        const totalVisible = state.renderedSearchCount || 0;
+        const allSelected = totalVisible > 0 && count >= totalVisible;
+        selectAllBtn.classList.toggle("all-selected", allSelected);
+        selectAllBtn.querySelector("span").textContent = allSelected ? "取消全选" : "全选";
+        selectAllBtn.querySelector("i").className = allSelected ? "fas fa-times-circle" : "fas fa-check-double";
+        selectAllBtn.disabled = totalVisible === 0;
+    }
 }
 
 function toggleSearchResultSelection(index) {
@@ -3876,6 +3896,31 @@ function toggleSearchResultSelection(index) {
         state.selectedSearchResults.add(numericIndex);
     }
     updateSearchResultSelectionUI(numericIndex);
+    updateImportSelectedButton();
+}
+
+function selectAllSearchResults() {
+    ensureSelectedSearchResultsSet();
+    const totalVisible = state.renderedSearchCount || 0;
+    if (totalVisible === 0) return;
+
+    const currentlySelectedCount = state.selectedSearchResults.size;
+    const allSelected = currentlySelectedCount >= totalVisible;
+
+    if (allSelected) {
+        // 取消全选
+        state.selectedSearchResults.clear();
+    } else {
+        // 全选
+        for (let i = 0; i < totalVisible; i++) {
+            state.selectedSearchResults.add(i);
+        }
+    }
+
+    // 更新 UI
+    for (let i = 0; i < totalVisible; i++) {
+        updateSearchResultSelectionUI(i);
+    }
     updateImportSelectedButton();
 }
 
@@ -3973,7 +4018,7 @@ function importSelectedSearchResults(target = "playlist") {
                 duplicates++;
                 return;
             }
-            favorites.push(normalized);
+            favorites.unshift(normalized);
             if (key) {
                 existingKeys.add(key);
             }
@@ -3981,6 +4026,7 @@ function importSelectedSearchResults(target = "playlist") {
         });
 
         if (added > 0) {
+            state.currentFavoriteIndex = (state.currentFavoriteIndex ?? -1) + added;
             saveFavoriteState();
             renderFavorites();
             const duplicateHint = duplicates > 0 ? `，${duplicates} 首已存在` : "";
@@ -4012,7 +4058,7 @@ function importSelectedSearchResults(target = "playlist") {
             duplicates++;
             return;
         }
-        state.playlistSongs.push(song);
+        state.playlistSongs.unshift(song);
         if (key) {
             existingKeys.add(key);
         }
@@ -4020,6 +4066,7 @@ function importSelectedSearchResults(target = "playlist") {
     });
 
     if (added > 0) {
+        state.currentTrackIndex = (state.currentTrackIndex ?? -1) + added;
         renderPlaylist();
         const duplicateHint = duplicates > 0 ? `，${duplicates} 首已存在` : "";
         showNotification(`成功导入 ${added} 首歌曲${duplicateHint}`, "success");
@@ -4076,11 +4123,24 @@ function displaySearchResults(newItems, options = {}) {
     if (itemsToAppend.length > 0) {
         const fragment = document.createDocumentFragment();
         const startIndex = state.renderedSearchCount;
+        
+        // 如果当前是全选状态，新加载的项目也自动选中
+        const selectAllBtn = dom.selectAllBtn;
+        const isAllSelected = selectAllBtn && selectAllBtn.classList.contains("all-selected");
+        
         itemsToAppend.forEach((song, offset) => {
-            fragment.appendChild(createSearchResultItem(song, startIndex + offset));
+            const index = startIndex + offset;
+            if (isAllSelected) {
+                state.selectedSearchResults.add(index);
+            }
+            fragment.appendChild(createSearchResultItem(song, index));
         });
         container.appendChild(fragment);
         state.renderedSearchCount += itemsToAppend.length;
+        
+        if (isAllSelected) {
+            updateImportSelectedButton();
+        }
     }
 
     if (state.hasMoreResults) {
@@ -4242,9 +4302,9 @@ async function playSearchResult(index) {
             state.currentPlaylist = "playlist";
             state.currentList = "playlist";
         } else {
-            // 如果歌曲不存在，添加到播放列表
-            state.playlistSongs.push(song);
-            state.currentTrackIndex = state.playlistSongs.length - 1;
+            // 如果歌曲不存在，添加到播放列表顶部
+            state.playlistSongs.unshift(song);
+            state.currentTrackIndex = 0;
             state.currentPlaylist = "playlist";
             state.currentList = "playlist";
         }
@@ -4491,7 +4551,7 @@ function handleImportedPlaylistItems(rawItems) {
             duplicates++;
             return;
         }
-        state.playlistSongs.push(song);
+        state.playlistSongs.unshift(song);
         if (key) {
             existingKeys.add(key);
         }
@@ -4499,6 +4559,7 @@ function handleImportedPlaylistItems(rawItems) {
     });
 
     if (added > 0) {
+        state.currentTrackIndex = (state.currentTrackIndex ?? -1) + added;
         renderPlaylist();
     } else {
         updatePlaylistActionStates();
@@ -4793,7 +4854,10 @@ function addSongToPlaylist(song) {
     if (exists) {
         return false;
     }
-    state.playlistSongs.push(song);
+    state.playlistSongs.unshift(song);
+    if (state.currentTrackIndex !== undefined && state.currentTrackIndex >= 0) {
+        state.currentTrackIndex++;
+    }
     return true;
 }
 
@@ -4934,7 +4998,10 @@ function toggleFavorite(song) {
         removeFavoriteAtIndex(existingIndex);
         showNotification("已从收藏列表移除", "success");
     } else {
-        favorites.push(normalizedSong);
+        favorites.unshift(normalizedSong);
+        if (state.currentFavoriteIndex !== undefined && state.currentFavoriteIndex >= 0) {
+            state.currentFavoriteIndex++;
+        }
         saveFavoriteState();
         renderFavorites();
         showNotification("已添加到收藏列表", "success");
@@ -4992,7 +5059,7 @@ function addAllFavoritesToPlaylist() {
             duplicates++;
             return;
         }
-        state.playlistSongs.push(song);
+        state.playlistSongs.unshift(song);
         if (key) {
             existingKeys.add(key);
         }
@@ -5000,6 +5067,9 @@ function addAllFavoritesToPlaylist() {
     });
 
     if (added > 0) {
+        if (state.currentTrackIndex !== undefined && state.currentTrackIndex >= 0) {
+            state.currentTrackIndex += added;
+        }
         renderPlaylist();
         const duplicateHint = duplicates > 0 ? `，${duplicates} 首已存在` : "";
         showNotification(`已添加 ${added} 首收藏歌曲到播放列表${duplicateHint}`, "success");
@@ -5100,7 +5170,7 @@ function handleImportedFavoriteItems(rawItems) {
             duplicates++;
             return;
         }
-        favorites.push(song);
+        favorites.unshift(song);
         if (key) {
             existingKeys.add(key);
         }
@@ -5108,6 +5178,7 @@ function handleImportedFavoriteItems(rawItems) {
     });
 
     if (added > 0) {
+        state.currentFavoriteIndex = (state.currentFavoriteIndex ?? -1) + added;
         saveFavoriteState();
         renderFavorites();
     } else {
@@ -5737,7 +5808,7 @@ async function exploreOnlineMusic() {
             if (key && existingKeys.has(key)) {
                 continue;
             }
-            appendedSongs.push(song);
+            appendedSongs.unshift(song);
             if (key) {
                 existingKeys.add(key);
             }
@@ -5749,7 +5820,8 @@ async function exploreOnlineMusic() {
             return;
         }
 
-        state.playlistSongs = existingSongs.concat(appendedSongs);
+        state.playlistSongs = appendedSongs.concat(existingSongs);
+        state.currentTrackIndex = (state.currentTrackIndex ?? -1) + appendedSongs.length;
         state.onlineSongs = state.playlistSongs.slice();
         state.currentPlaylist = "playlist";
         state.currentList = "playlist";

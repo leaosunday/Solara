@@ -870,6 +870,19 @@ body.mobile-view .search-results-toolbar {
     width: min(100%, 340px);
     margin: 0 auto;
     padding-top: 8px;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    gap: 8px;
+}
+
+body.mobile-view .select-all-btn,
+body.mobile-view .import-dropdown {
+    flex: 1;
+}
+
+body.mobile-view .select-all-btn {
+    justify-content: center;
 }
 
 body.mobile-view .import-selected-btn {
