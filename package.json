@@ -15,6 +15,8 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "fluent-ffmpeg": "^2.1.3",
+    "ftag": "^1.0.0",
+    "metaflac-js": "^1.0.5",
     "music-metadata": "^11.10.6",
     "node-fetch": "^2.7.0",
     "node-id3": "^0.2.9"

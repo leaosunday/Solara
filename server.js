@@ -7,8 +7,9 @@ const fetch = require('node-fetch');
 const fs = require('fs');
 const axios = require('axios');
 const NodeID3 = require('node-id3');
+const MetaFlac = require('metaflac-js');
 const mm = require('music-metadata');
-const ffmpeg = require('fluent-ffmpeg');
+// const ffmpeg = require('fluent-ffmpeg'); // 移除 ffmpeg 依赖
 const { buildPalette } = require('./lib/palette');
 require('dotenv').config();
 
@@ -163,6 +164,16 @@ async function embedMetadata(filePath, song, providedPicUrl) {
 
         if (picUrl) {
             try {
+                // 如果是本机的代理 URL，尝试直接抓取原始 URL 或修正 URL
+                if (picUrl.includes('localhost') && picUrl.includes('target=')) {
+                    const urlObj = new URL(picUrl);
+                    const target = urlObj.searchParams.get('target');
+                    if (target) {
+                        picUrl = target;
+                        console.log(`Extracted target cover URL: ${picUrl}`);
+                    }
+                }
+
                 console.log(`Fetching cover from: ${picUrl}`);
                 // 根据用户提供的抓包信息，完美模拟浏览器 Headers
                 const imgRes = await axios.get(picUrl, { 
@@ -171,16 +182,8 @@ async function embedMetadata(filePath, song, providedPicUrl) {
                     headers: { 
                         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
                         'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-                        'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache',
-                        'Referer': 'http://localhost:3000/',
-                        'Sec-Ch-Ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
-                        'Sec-Ch-Ua-Mobile': '?0',
-                        'Sec-Ch-Ua-Platform': '"macOS"',
-                        'Sec-Fetch-Dest': 'image',
-                        'Sec-Fetch-Mode': 'cors',
-                        'Sec-Fetch-Site': 'cross-site'
+                        'Referer': picUrl.includes('kuwo.cn') ? 'https://www.kuwo.cn/' : (picUrl.includes('netease') ? 'https://music.163.com/' : 'https://www.google.com/'),
+                        'Cache-Control': 'no-cache'
                     }
                 });
                 
@@ -259,63 +262,37 @@ async function embedMetadata(filePath, song, providedPicUrl) {
                     imageBuffer: imageBuffer
                 };
             }
-            // 尝试使用 ID3v2.3 增加兼容性
+            // 尝试使用 ID3v2.3 增加兼容性并写入
+            const options = {
+                include: ['TALB', 'TIT2', 'TPE1', 'USLT', 'APIC'],
+                noAutoTag: false
+            };
             const success = NodeID3.write(tags, filePath);
-            console.log(`MP3 Metadata write result: ${success}`);
-        } else if (['.flac', '.m4a', '.ogg', '.wav', '.ape'].includes(fileExt)) {
-            const tempOutputPath = filePath + '.meta' + fileExt;
-            const hasCover = fs.existsSync(tempCoverPath);
-            
-            // 构建 ffmpeg 命令
-            let command = ffmpeg(filePath);
-            
-            if (hasCover) {
-                command = command.input(tempCoverPath);
+            console.log(`MP3 Metadata write result: ${success} (Title: ${song.name}, Artist: ${artistStr}, Lyrics: ${lyric.length > 0}, Cover: ${!!imageBuffer})`);
+        } else if (fileExt === '.flac') {
+            try {
+                const flac = new MetaFlac(filePath);
+                // 强制清除旧标签以防冲突
+                flac.removeAllTags();
+                
+                flac.setTag(`TITLE=${song.name}`);
+                flac.setTag(`ARTIST=${artistStr}`);
+                flac.setTag(`ALBUM=${song.album || ''}`);
+                if (lyric) {
+                    // FLAC 标准歌词标签
+                    flac.setTag(`LYRICS=${lyric}`);
+                    flac.setTag(`DESCRIPTION=${lyric}`); // 增加兼容性
+                }
+                if (imageBuffer) {
+                    flac.importPictureFromBuffer(imageBuffer);
+                }
+                flac.save();
+                console.log(`FLAC Metadata embedded successfully (Title: ${song.name}, Artist: ${artistStr}, Lyrics: ${lyric.length > 0}, Cover: ${!!imageBuffer})`);
+            } catch (flacError) {
+                console.error('FLAC Metadata embedding failed:', flacError.message);
             }
-
-            // 基础元数据设置
-            command = command
-                .outputOptions('-metadata', `title=${song.name}`)
-                .outputOptions('-metadata', `artist=${artistStr}`)
-                .outputOptions('-metadata', `album=${song.album || ''}`);
-
-            if (lyric) {
-                // FLAC 歌词标签：LYRICS 是标准，UNSYNCEDLYRICS 增加兼容性
-                command = command.outputOptions('-metadata', `LYRICS=${lyric}`);
-                command = command.outputOptions('-metadata', `UNSYNCEDLYRICS=${lyric}`);
-                command = command.outputOptions('-metadata', `comment=${lyric}`);
-            }
-
-            if (hasCover) {
-                // 映射音频和封面
-                command = command.outputOptions('-map', '0:a');
-                command = command.outputOptions('-map', '1:0');
-                // 设置封面属性
-                command = command.outputOptions('-disposition:v:0', 'attached_pic');
-            } else {
-                command = command.outputOptions('-map', '0:a');
-            }
-
-            // 执行转换
-            await new Promise((resolve, reject) => {
-                command
-                    .outputOptions('-c', 'copy')
-                    .on('end', () => {
-                        if (fs.existsSync(tempOutputPath)) {
-                            fs.renameSync(tempOutputPath, filePath);
-                            console.log(`${fileExt} Metadata embedded successfully`);
-                        }
-                        resolve();
-                    })
-                    .on('error', (err) => {
-                        console.error(`ffmpeg error for ${fileExt}:`, err.message);
-                        if (fs.existsSync(tempOutputPath)) fs.unlinkSync(tempOutputPath);
-                        resolve(); // 即使失败也继续，不阻塞下载流
-                    })
-                    .save(tempOutputPath);
-            });
         } else {
-            console.log(`Unsupported file extension for embedding: ${fileExt}`);
+            console.log(`Unsupported file extension for pure-js embedding: ${fileExt}. Skipping metadata.`);
         }
     } catch (error) {
         console.error('Metadata embedding failed:', error);

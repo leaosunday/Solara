@@ -19,11 +19,6 @@ RUN npm install
 # --- 阶段 2: 运行阶段 ---
 FROM node:20-slim
 
-# 安装运行所需的运行时库和 ffmpeg（用于音频处理）
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 # 从构建阶段复制 node_modules
