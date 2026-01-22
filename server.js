@@ -410,6 +410,65 @@ app.post('/api/nas-download', async (req, res) => {
     }
 });
 
+// 浏览器下载接口：嵌入元数据后返回文件流
+app.post('/api/download', async (req, res) => {
+    const { url, filename, song, picUrl } = req.body;
+    if (!url || !filename) {
+        return res.status(400).json({ error: 'Missing url or filename' });
+    }
+
+    const tempDir = path.join(__dirname, 'temp_downloads');
+    if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const tempFilePath = path.join(tempDir, `${Date.now()}_${filename}`);
+    
+    try {
+        console.log(`Browser download request for: ${filename}`);
+        
+        // 1. 下载原始音频文件
+        const response = await axios({
+            url: url,
+            method: 'GET',
+            responseType: 'stream',
+            timeout: 30000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': url.includes('kuwo.cn') ? 'https://www.kuwo.cn/' : 'https://music.163.com/'
+            }
+        });
+
+        const writer = fs.createWriteStream(tempFilePath);
+        response.data.pipe(writer);
+
+        await new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+        });
+
+        // 2. 嵌入元数据
+        await embedMetadata(tempFilePath, song, picUrl);
+
+        // 3. 发送文件给浏览器
+        res.download(tempFilePath, filename, (err) => {
+            if (err) {
+                console.error('Error sending file:', err);
+            }
+            // 4. 清理临时文件
+            if (fs.existsSync(tempFilePath)) {
+                try { fs.unlinkSync(tempFilePath); } catch(e) {}
+            }
+        });
+    } catch (error) {
+        console.error('Browser download failed:', error);
+        if (fs.existsSync(tempFilePath)) {
+            try { fs.unlinkSync(tempFilePath); } catch(e) {}
+        }
+        res.status(500).json({ error: 'Failed to process download' });
+    }
+});
+
 app.listen(port, () => {
   console.log(`Solara server running at http://localhost:${port}`);
   console.log(`Using SQLite database at: ${path.resolve(dbPath)}`);

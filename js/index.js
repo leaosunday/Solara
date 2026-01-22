@@ -6110,19 +6110,6 @@ async function downloadSong(song, quality = "320") {
         const audioData = await API.fetchJson(audioUrl);
 
         if (audioData && audioData.url) {
-            const proxiedAudioUrl = buildAudioProxyUrl(audioData.url);
-            const preferredAudioUrl = preferHttpsUrl(audioData.url);
-
-            if (proxiedAudioUrl !== audioData.url) {
-                debugLog(`下载链接已通过代理转换为 HTTPS: ${proxiedAudioUrl}`);
-            } else if (preferredAudioUrl !== audioData.url) {
-                debugLog(`下载链接由 HTTP 升级为 HTTPS: ${preferredAudioUrl}`);
-            }
-
-            const downloadUrl = proxiedAudioUrl || preferredAudioUrl || audioData.url;
-
-            const link = document.createElement("a");
-            link.href = downloadUrl;
             const preferredExtension =
                 quality === "999" ? "flac" : quality === "740" ? "ape" : "mp3";
             const fileExtension = (() => {
@@ -6130,21 +6117,64 @@ async function downloadSong(song, quality = "320") {
                     const url = new URL(audioData.url);
                     const pathname = url.pathname || "";
                     const match = pathname.match(/\.([a-z0-9]+)$/i);
-                    if (match) {
-                        return match[1];
-                    }
-                } catch (error) {
-                    console.warn("无法从下载链接中解析扩展名:", error);
-                }
+                    if (match) return match[1];
+                } catch (e) {}
                 return preferredExtension;
             })();
-            link.download = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(", ") : song.artist}.${fileExtension}`;
-            link.target = "_blank";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
 
-            showNotification("下载已开始", "success");
+            const filename = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(", ") : song.artist}.${fileExtension}`;
+            const picUrl = API.getPicUrl(song);
+
+            // 修复：改用服务器下载接口，以获取嵌入元数据后的文件
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: audioData.url,
+                        filename: filename,
+                        song: song,
+                        picUrl: picUrl
+                    })
+                });
+
+                if (!response.ok) throw new Error('服务器下载请求失败');
+                
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement("a");
+                link.href = blobUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // 延迟释放 URL 对象
+                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+                showNotification("下载已完成并成功嵌入元数据", "success");
+            } catch (serverError) {
+                console.warn("服务器嵌入式下载失败，回退到原始直接下载:", serverError);
+                // Fallback: 如果服务器处理失败，回退到之前的 blob 下载方式（无元数据）
+                const proxiedAudioUrl = buildAudioProxyUrl(audioData.url);
+                const preferredAudioUrl = preferHttpsUrl(audioData.url);
+                const downloadUrl = proxiedAudioUrl || preferredAudioUrl || audioData.url;
+                
+                const response = await fetch(downloadUrl);
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement("a");
+                link.href = blobUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+                showNotification("下载已开始 (未嵌入元数据)", "warning");
+            }
         } else {
             throw new Error("无法获取下载地址");
         }
