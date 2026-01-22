@@ -147,8 +147,6 @@ async function embedMetadata(filePath, song, providedPicUrl) {
     const tempCoverPath = filePath + '.cover.jpg';
     
     try {
-        console.log(`Starting metadata embedding for: ${filePath}`);
-        
         // 1. 获取封面图片
         let imageBuffer = null;
         
@@ -170,11 +168,9 @@ async function embedMetadata(filePath, song, providedPicUrl) {
                     const target = urlObj.searchParams.get('target');
                     if (target) {
                         picUrl = target;
-                        console.log(`Extracted target cover URL: ${picUrl}`);
                     }
                 }
 
-                console.log(`Fetching cover from: ${picUrl}`);
                 // 根据用户提供的抓包信息，完美模拟浏览器 Headers
                 const imgRes = await axios.get(picUrl, { 
                     responseType: 'arraybuffer', 
@@ -195,7 +191,6 @@ async function embedMetadata(filePath, song, providedPicUrl) {
                     try {
                         const json = JSON.parse(buffer.toString());
                         if (json.url) {
-                            console.log(`JSON response received, fetching real image URL: ${json.url}`);
                             const realImgRes = await axios.get(json.url, {
                                 responseType: 'arraybuffer',
                                 timeout: 15000,
@@ -205,8 +200,6 @@ async function embedMetadata(filePath, song, providedPicUrl) {
                                 }
                             });
                             buffer = Buffer.from(realImgRes.data);
-                            const realContentType = realImgRes.headers['content-type'];
-                            console.log(`Real image downloaded: ${buffer.length} bytes, type: ${realContentType}`);
                         }
                     } catch (e) {
                         console.warn('Failed to parse JSON cover response or fetch real image:', e.message);
@@ -216,7 +209,6 @@ async function embedMetadata(filePath, song, providedPicUrl) {
                 if (buffer.length > 1000) {
                     imageBuffer = buffer;
                     fs.writeFileSync(tempCoverPath, imageBuffer);
-                    console.log(`Cover image ready: ${imageBuffer.length} bytes`);
                 } else {
                     console.warn(`Invalid cover image data: ${buffer.length} bytes.`);
                 }
@@ -234,7 +226,6 @@ async function embedMetadata(filePath, song, providedPicUrl) {
                 const lrcRes = await axios.get(lrcUrl, { timeout: 10000 });
                 if (lrcRes.data && lrcRes.data.lyric) {
                     lyric = lrcRes.data.lyric;
-                    console.log(`Lyrics fetched: ${lyric.length} characters`);
                 }
             } catch (err) {
                 console.warn('Failed to fetch lyrics:', err.message);
@@ -268,7 +259,6 @@ async function embedMetadata(filePath, song, providedPicUrl) {
                 noAutoTag: false
             };
             const success = NodeID3.write(tags, filePath);
-            console.log(`MP3 Metadata write result: ${success} (Title: ${song.name}, Artist: ${artistStr}, Lyrics: ${lyric.length > 0}, Cover: ${!!imageBuffer})`);
         } else if (fileExt === '.flac') {
             try {
                 const flac = new MetaFlac(filePath);
@@ -287,12 +277,9 @@ async function embedMetadata(filePath, song, providedPicUrl) {
                     flac.importPictureFromBuffer(imageBuffer);
                 }
                 flac.save();
-                console.log(`FLAC Metadata embedded successfully (Title: ${song.name}, Artist: ${artistStr}, Lyrics: ${lyric.length > 0}, Cover: ${!!imageBuffer})`);
             } catch (flacError) {
                 console.error('FLAC Metadata embedding failed:', flacError.message);
             }
-        } else {
-            console.log(`Unsupported file extension for pure-js embedding: ${fileExt}. Skipping metadata.`);
         }
     } catch (error) {
         console.error('Metadata embedding failed:', error);
@@ -392,8 +379,6 @@ app.post('/api/nas-download', async (req, res) => {
         response.body.pipe(fileStream);
 
         fileStream.on('finish', async () => {
-            console.log(`File saved to NAS: ${filePath}`);
-            
             // 嵌入元数据，增加 picUrl 参数
             await embedMetadata(filePath, song, picUrl);
             
@@ -425,8 +410,6 @@ app.post('/api/download', async (req, res) => {
     const tempFilePath = path.join(tempDir, `${Date.now()}_${filename}`);
     
     try {
-        console.log(`Browser download request for: ${filename}`);
-        
         // 1. 下载原始音频文件
         const response = await axios({
             url: url,

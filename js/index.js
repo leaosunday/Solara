@@ -1963,8 +1963,8 @@ function saveFavoriteState(options = {}) {
 
 // 调试日志函数
 function debugLog(message) {
-    console.log(`[DEBUG] ${message}`);
     if (state.debugMode) {
+        console.log(`[DEBUG] ${message}`);
         const debugInfo = dom.debugInfo;
         const entry = document.createElement("div");
         entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
