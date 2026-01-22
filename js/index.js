@@ -826,15 +826,38 @@ const API = {
             });
 
             if (!response.ok) {
-                throw new Error(`Request failed with status ${response.status}`);
+                // 如果状态码不为 200，尝试读取响应体看是否有更详细的错误
+                let errorDetail = `Request failed with status ${response.status}`;
+                try {
+                    const text = await response.text();
+                    if (text.includes("<title>")) {
+                        const titleMatch = text.match(/<title>(.*?)<\/title>/i);
+                        if (titleMatch) errorDetail = titleMatch[1].trim();
+                    }
+                } catch (e) {}
+                throw new Error(errorDetail);
             }
 
             const text = await response.text();
+            
+            // 检查返回的是否是 HTML（可能是 200 OK 但内容是错误页面）
+            if (text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html") || text.includes("<title>")) {
+                const titleMatch = text.match(/<title>(.*?)<\/title>/i);
+                if (titleMatch) {
+                    throw new Error(titleMatch[1].trim());
+                }
+            }
+
             try {
                 return JSON.parse(text);
             } catch (parseError) {
-                console.warn("JSON parse failed, returning raw text", parseError);
-                return text;
+                console.warn("JSON parse failed", parseError);
+                // 如果解析 JSON 失败，且包含标题标签，说明可能是隐藏的错误页
+                if (text.includes("<title>")) {
+                    const titleMatch = text.match(/<title>(.*?)<\/title>/i);
+                    if (titleMatch) throw new Error(titleMatch[1].trim());
+                }
+                throw new Error(`数据格式错误 (JSON 解析失败)`);
             }
         } catch (error) {
             console.error("API request error:", error);
