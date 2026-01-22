@@ -532,6 +532,87 @@ body.background-transitioning .background-stage__layer--transition {
     background: var(--item-hover-bg);
 }
 
+/* 子菜单样式 */
+.import-dropdown-item-with-submenu {
+    position: relative;
+}
+
+.import-dropdown-item-with-submenu .import-dropdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.submenu-icon {
+    font-size: 10px;
+    opacity: 0.5;
+}
+
+.import-submenu {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    margin-left: 2px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    padding: 6px 0;
+    min-width: 140px;
+    z-index: 20001;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-5px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+}
+
+.dark-mode .import-submenu {
+    background: rgba(28, 28, 28, 0.98);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.import-dropdown-item-with-submenu:hover .import-submenu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+}
+
+.import-submenu-item {
+    width: 100%;
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    text-align: left;
+    font-size: 13px;
+    color: var(--text-primary-color);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.import-submenu-item:hover {
+    background: var(--item-hover-bg);
+    color: var(--primary-color);
+}
+
+/* 移动端适配：子菜单向上弹出或以另一种方式显示 */
+@media (max-width: 820px) {
+    .import-submenu {
+        left: auto;
+        right: 0;
+        top: auto;
+        bottom: 100%;
+        margin-left: 0;
+        margin-bottom: 2px;
+        transform: translateY(5px);
+    }
+    
+    .import-dropdown-item-with-submenu:hover .import-submenu {
+        transform: translateY(0);
+    }
+}
+
 .search-results-list {
     display: flex;
     flex-direction: column;

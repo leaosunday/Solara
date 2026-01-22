@@ -187,6 +187,47 @@
                             </button>
                         </div>
                     </div>
+                    <div class="import-dropdown">
+                        <button
+                            id="downloadSelectedBtn"
+                            class="import-selected-btn"
+                            type="button"
+                            disabled
+                            aria-haspopup="menu"
+                            aria-expanded="false"
+                        >
+                            <i class="fas fa-download" aria-hidden="true"></i>
+                            <span class="import-selected-label">下载已选</span>
+                            <span id="downloadSelectedCount" class="import-selected-count" aria-hidden="true"></span>
+                            <i class="fas fa-caret-down import-dropdown-caret" aria-hidden="true"></i>
+                        </button>
+                        <div class="import-dropdown-menu" id="downloadSelectedMenu" role="menu" hidden>
+                            <div class="import-dropdown-item-with-submenu">
+                                <button id="batchDownload" class="import-dropdown-item" type="button" role="menuitem">
+                                    批量下载
+                                    <i class="fas fa-chevron-right submenu-icon"></i>
+                                </button>
+                                <div class="import-submenu" role="menu">
+                                    <button class="import-submenu-item" type="button" data-quality="128" data-nas="false">标准音质 (128k)</button>
+                                    <button class="import-submenu-item" type="button" data-quality="192" data-nas="false">高音质 (192k)</button>
+                                    <button class="import-submenu-item" type="button" data-quality="320" data-nas="false">超高音质 (320k)</button>
+                                    <button class="import-submenu-item" type="button" data-quality="999" data-nas="false">无损音质</button>
+                                </div>
+                            </div>
+                            <div class="import-dropdown-item-with-submenu">
+                                <button id="batchDownloadNas" class="import-dropdown-item" type="button" role="menuitem">
+                                    批量下载到NAS
+                                    <i class="fas fa-chevron-right submenu-icon"></i>
+                                </button>
+                                <div class="import-submenu" role="menu">
+                                    <button class="import-submenu-item" type="button" data-quality="128" data-nas="true">标准音质 (128k)</button>
+                                    <button class="import-submenu-item" type="button" data-quality="192" data-nas="true">高音质 (192k)</button>
+                                    <button class="import-submenu-item" type="button" data-quality="320" data-nas="true">超高音质 (320k)</button>
+                                    <button class="import-submenu-item" type="button" data-quality="999" data-nas="true">无损音质</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div id="searchResultsList" class="search-results-list"></div>
             </div>

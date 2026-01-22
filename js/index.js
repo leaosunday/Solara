@@ -3382,19 +3382,31 @@ function setupInteractions() {
         });
     }
 
+    if (dom.downloadSelectedMenu) {
+        dom.downloadSelectedMenu.addEventListener("click", (event) => {
+            const submenuItem = event.target.closest(".import-submenu-item");
+            if (submenuItem) {
+                event.preventDefault();
+                event.stopPropagation();
+                const quality = submenuItem.dataset.quality;
+                const isNas = submenuItem.dataset.nas === "true";
+                closeDownloadSelectedMenu();
+                batchDownloadSongs(quality, isNas);
+            }
+        });
+    }
+
     if (dom.batchDownload) {
         dom.batchDownload.addEventListener("click", (event) => {
             event.preventDefault();
-            closeDownloadSelectedMenu();
-            batchDownloadSongs(false);
+            event.stopPropagation();
         });
     }
 
     if (dom.batchDownloadNas) {
         dom.batchDownloadNas.addEventListener("click", (event) => {
             event.preventDefault();
-            closeDownloadSelectedMenu();
-            batchDownloadSongs(true);
+            event.stopPropagation();
         });
     }
 
@@ -4058,7 +4070,7 @@ function closeDownloadSelectedMenu() {
     }
 }
 
-async function batchDownloadSongs(isNas = false) {
+async function batchDownloadSongs(quality = "320", isNas = false) {
     ensureSelectedSearchResultsSet();
     const count = state.selectedSearchResults.size;
     if (count === 0) return;
@@ -4069,11 +4081,15 @@ async function batchDownloadSongs(isNas = false) {
     if (songsToDownload.length === 0) return;
 
     const actionText = isNas ? "下载到 NAS" : "下载";
-    const confirmMessage = `确定要批量${actionText} ${songsToDownload.length} 首歌曲吗？`;
+    const qualityTextMap = {
+        "128": "标准 (128k)",
+        "192": "高音质 (192k)",
+        "320": "超高音质 (320k)",
+        "999": "无损"
+    };
+    const qualityText = qualityTextMap[quality] || quality;
     
-    if (!confirm(confirmMessage)) return;
-
-    showNotification(`正在开始批量${actionText} ${songsToDownload.length} 首歌曲...`, "info");
+    showNotification(`正在以 ${qualityText} 批量${actionText} ${songsToDownload.length} 首歌曲...`, "info");
 
     let successCount = 0;
     let failCount = 0;
@@ -4081,9 +4097,9 @@ async function batchDownloadSongs(isNas = false) {
     for (const song of songsToDownload) {
         try {
             if (isNas) {
-                await downloadSongToNas(song, "320");
+                await downloadSongToNas(song, quality);
             } else {
-                await downloadSong(song, "320");
+                await downloadSong(song, quality);
             }
             successCount++;
         } catch (error) {
