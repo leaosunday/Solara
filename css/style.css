@@ -572,6 +572,72 @@ body.background-transitioning .background-stage__layer--transition {
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
 
+/* 下载失败弹窗详情样式 */
+.download-error-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.download-error-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(255, 59, 48, 0.08);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 59, 48, 0.15);
+    transition: all 0.2s ease;
+}
+
+.dark-mode .download-error-item {
+    background: rgba(255, 59, 48, 0.12);
+    border-color: rgba(255, 59, 48, 0.25);
+}
+
+.download-error-item:hover {
+    background: rgba(255, 59, 48, 0.12);
+    transform: translateX(4px);
+}
+
+.download-error-icon {
+    color: #ff3b30;
+    margin-right: 12px;
+    font-size: 16px;
+}
+
+.download-error-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.download-error-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-color);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.download-error-artist {
+    font-size: 12px;
+    color: var(--text-secondary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.download-error-msg {
+    font-size: 11px;
+    color: #ff3b30;
+    margin-top: 4px;
+    opacity: 0.8;
+}
+
 .import-dropdown-item-with-submenu:hover .import-submenu {
     opacity: 1;
     visibility: visible;

@@ -109,6 +109,11 @@ const dom = {
     cancelDiscovery: document.getElementById("cancelDiscovery"),
     closeDiscoveryModal: document.getElementById("closeDiscoveryModal"),
     discoveryOverlay: document.querySelector("#discoveryModal .modal-overlay"),
+    downloadErrorModal: document.getElementById("downloadErrorModal"),
+    downloadErrorList: document.getElementById("downloadErrorList"),
+    closeDownloadErrorModal: document.getElementById("closeDownloadErrorModal"),
+    closeDownloadErrorBtn: document.getElementById("closeDownloadErrorBtn"),
+    downloadErrorOverlay: document.querySelector("#downloadErrorModal .modal-overlay"),
 };
 
 window.SolaraDom = dom;
@@ -3217,6 +3222,16 @@ function setupInteractions() {
     switchLibraryTab(state.currentList === "favorite" ? "favorites" : "playlist");
     updatePlayModeUI();
 
+    if (dom.closeDownloadErrorModal) {
+        dom.closeDownloadErrorModal.addEventListener("click", closeDownloadErrorModal);
+    }
+    if (dom.closeDownloadErrorBtn) {
+        dom.closeDownloadErrorBtn.addEventListener("click", closeDownloadErrorModal);
+    }
+    if (dom.downloadErrorOverlay) {
+        dom.downloadErrorOverlay.addEventListener("click", closeDownloadErrorModal);
+    }
+
     dom.playPauseBtn.addEventListener("click", togglePlayPause);
     dom.audioPlayer.addEventListener("timeupdate", handleTimeUpdate);
     dom.audioPlayer.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -4265,6 +4280,7 @@ async function batchDownloadSongs(quality = "320", isNas = false) {
 
     let successCount = 0;
     let failCount = 0;
+    const errorSongs = [];
 
     for (const song of songsToDownload) {
         try {
@@ -4277,6 +4293,7 @@ async function batchDownloadSongs(quality = "320", isNas = false) {
         } catch (error) {
             console.error(`${actionText}失败: ${song.name}`, error);
             failCount++;
+            errorSongs.push({ song, error });
         }
         // 添加一点延迟避免请求过快
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -4286,6 +4303,7 @@ async function batchDownloadSongs(quality = "320", isNas = false) {
         showNotification(`批量${actionText}完成！共成功 ${successCount} 首。`, "success");
     } else {
         showNotification(`批量${actionText}结束。成功: ${successCount}, 失败: ${failCount}`, "info");
+        showDownloadErrorModal(errorSongs, actionText);
     }
 
     // 下载完成后清空选择
@@ -4317,6 +4335,7 @@ async function downloadCurrentPlaylist(isNas = false, quality = "320") {
 
     let successCount = 0;
     let failCount = 0;
+    const errorSongs = [];
 
     for (const song of songs) {
         try {
@@ -4329,6 +4348,7 @@ async function downloadCurrentPlaylist(isNas = false, quality = "320") {
         } catch (error) {
             console.error(`${actionText}失败: ${song.name}`, error);
             failCount++;
+            errorSongs.push({ song, error });
         }
         // 添加一点延迟避免请求过快
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -4338,6 +4358,7 @@ async function downloadCurrentPlaylist(isNas = false, quality = "320") {
         showNotification(`播放列表批量${actionText}完成！共成功 ${successCount} 首。`, "success");
     } else {
         showNotification(`播放列表批量${actionText}结束。成功: ${successCount}, 失败: ${failCount}`, "info");
+        showDownloadErrorModal(errorSongs, actionText);
     }
 }
 
@@ -4361,6 +4382,7 @@ async function downloadFavorites(isNas = false, quality = "320") {
 
     let successCount = 0;
     let failCount = 0;
+    const errorSongs = [];
 
     for (const song of songs) {
         try {
@@ -4373,6 +4395,7 @@ async function downloadFavorites(isNas = false, quality = "320") {
         } catch (error) {
             console.error(`${actionText}失败: ${song.name}`, error);
             failCount++;
+            errorSongs.push({ song, error });
         }
         // 添加一点延迟避免请求过快
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -4382,6 +4405,7 @@ async function downloadFavorites(isNas = false, quality = "320") {
         showNotification(`收藏列表批量${actionText}完成！共成功 ${successCount} 首。`, "success");
     } else {
         showNotification(`收藏列表批量${actionText}结束。成功: ${successCount}, 失败: ${failCount}`, "info");
+        showDownloadErrorModal(errorSongs, actionText);
     }
 }
 
@@ -4441,6 +4465,55 @@ function resetSelectedSearchResults() {
     updateImportSelectedButton();
     // 修复：同步到持久化状态
     persistLastSearchState();
+}
+
+/**
+ * 显示下载失败详情弹窗
+ * @param {Array} errorSongs 失败歌曲列表
+ * @param {string} actionText 下载动作名称
+ */
+function showDownloadErrorModal(errorSongs, actionText = "下载") {
+    if (!dom.downloadErrorModal || !dom.downloadErrorList || !Array.isArray(errorSongs) || errorSongs.length === 0) {
+        return;
+    }
+
+    // 清空旧列表
+    dom.downloadErrorList.innerHTML = "";
+
+    // 构建新列表
+    errorSongs.forEach(({ song, error }) => {
+        const item = document.createElement("div");
+        item.className = "download-error-item";
+        
+        const errorMsg = error?.message || error || "未知错误";
+        
+        item.innerHTML = `
+            <div class="download-error-icon">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <div class="download-error-info">
+                <div class="download-error-name">${song.name || "未知歌曲"}</div>
+                <div class="download-error-artist">${song.artist || "未知艺术家"}</div>
+                <div class="download-error-msg">${errorMsg}</div>
+            </div>
+        `;
+        dom.downloadErrorList.appendChild(item);
+    });
+
+    // 显示弹窗
+    dom.downloadErrorModal.classList.add("show");
+    dom.downloadErrorModal.hidden = false;
+    document.body.style.overflow = "hidden"; // 禁止背景滚动
+}
+
+/**
+ * 关闭下载失败详情弹窗
+ */
+function closeDownloadErrorModal() {
+    if (!dom.downloadErrorModal) return;
+    dom.downloadErrorModal.classList.remove("show");
+    dom.downloadErrorModal.hidden = true;
+    document.body.style.overflow = ""; // 恢复滚动
 }
 
 function closeImportSelectedMenu() {
