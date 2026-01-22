@@ -20,6 +20,9 @@ const dom = {
     showLyricsBtn: document.getElementById("showLyricsBtn"),
     searchInput: document.getElementById("searchInput"),
     searchBtn: document.getElementById("searchBtn"),
+    searchBtnWrapper: document.getElementById("searchBtnWrapper"),
+    searchTypeMenu: document.getElementById("searchTypeMenu"),
+    searchBtnText: document.getElementById("searchBtnText"),
     sourceSelectButton: document.getElementById("sourceSelectButton"),
     sourceSelectLabel: document.getElementById("sourceSelectLabel"),
     sourceMenu: document.getElementById("sourceMenu"),
@@ -945,6 +948,8 @@ const state = {
     isSeeking: false,
     qualityMenuOpen: false,
     sourceMenuOpen: false,
+    searchType: "song",
+    searchTypeMenuOpen: false,
     userScrolledLyrics: false, // 新增：用户是否手动滚动歌词
     lyricsScrollTimeout: null, // 新增：歌词滚动超时
     themeDefaultsCaptured: false,
@@ -2537,6 +2542,56 @@ function closeSourceMenu() {
     releaseFloatingMenuListenersIfIdle();
 }
 
+function openSearchTypeMenu() {
+    if (!dom.searchTypeMenu || !dom.searchBtn) return;
+    state.searchTypeMenuOpen = true;
+    dom.searchTypeMenu.classList.add("show");
+    dom.searchBtn.classList.add("active");
+    dom.searchBtn.setAttribute("aria-expanded", "true");
+}
+
+function closeSearchTypeMenu() {
+    if (!dom.searchTypeMenu || !dom.searchBtn) return;
+    dom.searchTypeMenu.classList.remove("show");
+    dom.searchBtn.classList.remove("active");
+    dom.searchBtn.setAttribute("aria-expanded", "false");
+    state.searchTypeMenuOpen = false;
+}
+
+function toggleSearchTypeMenu(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    if (state.searchTypeMenuOpen) {
+        closeSearchTypeMenu();
+    } else {
+        openSearchTypeMenu();
+    }
+}
+
+function handleSearchTypeSelection(event) {
+    const option = event.target.closest(".search-type-option");
+    if (!option) return;
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const { type } = option.dataset;
+    if (type) {
+        selectSearchType(type);
+    }
+}
+
+function selectSearchType(type) {
+    state.searchType = type;
+    if (dom.searchBtnText) {
+        dom.searchBtnText.textContent = type === "album" ? "搜索专辑" : "搜索歌曲";
+    }
+    closeSearchTypeMenu();
+    performSearch();
+}
+
 function toggleSourceMenu(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -3334,12 +3389,13 @@ function setupInteractions() {
     }
 
     // 搜索相关事件 - 修复搜索下拉框显示问题
-    dom.searchBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        debugLog("搜索按钮被点击");
-        performSearch();
-    });
+    if (dom.searchBtn) {
+        dom.searchBtn.addEventListener("click", toggleSearchTypeMenu);
+    }
+
+    if (dom.searchTypeMenu) {
+        dom.searchTypeMenu.addEventListener("click", handleSearchTypeSelection);
+    }
 
     dom.searchInput.addEventListener("focus", () => {
         debugLog("搜索输入框获得焦点，尝试恢复上次搜索结果");
@@ -3403,6 +3459,14 @@ function setupInteractions() {
             !dom.sourceMenu.contains(e.target) &&
             !dom.sourceSelectButton.contains(e.target)) {
             closeSourceMenu();
+        }
+
+        if (state.searchTypeMenuOpen &&
+            dom.searchTypeMenu &&
+            dom.searchBtn &&
+            !dom.searchTypeMenu.contains(e.target) &&
+            !dom.searchBtn.contains(e.target)) {
+            closeSearchTypeMenu();
         }
     });
 
@@ -3585,17 +3649,24 @@ async function performSearch(isLiveSearch = false) {
         closeSourceMenu();
     }
 
-    const source = normalizeSource(state.searchSource);
+    if (state.searchTypeMenuOpen) {
+        closeSearchTypeMenu();
+    }
+
+    let source = normalizeSource(state.searchSource);
     state.searchSource = source;
     safeSetLocalStorage("searchSource", source);
     updateSourceLabel();
     buildSourceMenu();
 
+    // 如果是搜索专辑，添加后缀
+    const apiSource = state.searchType === "album" ? `${source}_album` : source;
+
     // 重置搜索状态
     if (!isLiveSearch) {
         state.searchPage = 1;
         state.searchKeyword = query;
-        state.searchSource = source;
+        // state.searchSource = source; // 保持原始 source，不要存 _album 到 state.searchSource
         state.searchResults = [];
         state.hasMoreResults = true;
         state.renderedSearchCount = 0;
@@ -3604,15 +3675,15 @@ async function performSearch(isLiveSearch = false) {
         if (listContainer) {
             listContainer.innerHTML = "";
         }
-        debugLog(`开始新搜索: ${query}, 来源: ${source}`);
+        debugLog(`开始新搜索: ${query}, 来源: ${apiSource}`);
     } else {
         state.searchKeyword = query;
-        state.searchSource = source;
     }
 
     try {
         // 禁用搜索按钮并显示加载状态
         dom.searchBtn.disabled = true;
+        const originalBtnContent = dom.searchBtn.innerHTML;
         dom.searchBtn.innerHTML = '<span class="loader"></span><span>搜索中...</span>';
 
         // 立即显示搜索模式
@@ -3620,7 +3691,7 @@ async function performSearch(isLiveSearch = false) {
         debugLog("已切换到搜索模式");
 
         // 执行搜索
-        const results = await API.search(query, source, 20, state.searchPage);
+        const results = await API.search(query, apiSource, 20, state.searchPage);
         debugLog(`API返回结果数量: ${results.length}`);
 
         if (state.searchPage === 1) {
@@ -3652,7 +3723,10 @@ async function performSearch(isLiveSearch = false) {
     } finally {
         // 恢复搜索按钮状态
         dom.searchBtn.disabled = false;
-        dom.searchBtn.innerHTML = '<i class="fas fa-search"></i><span>搜索</span>';
+        const btnText = state.searchType === "album" ? "搜索专辑" : "搜索歌曲";
+        dom.searchBtn.innerHTML = `<i class="fas fa-search"></i><span id="searchBtnText">${btnText}</span><i class="fas fa-chevron-down caret-icon" aria-hidden="true"></i>`;
+        // 重新获取文本 DOM 引用，因为 innerHTML 改变了
+        dom.searchBtnText = document.getElementById("searchBtnText");
     }
 }
 
@@ -3679,7 +3753,10 @@ async function loadMoreResults() {
         const source = normalizeSource(state.searchSource);
         state.searchSource = source;
         safeSetLocalStorage("searchSource", source);
-        const results = await API.search(state.searchKeyword, source, 20, state.searchPage);
+
+        // 如果是搜索专辑，添加后缀
+        const apiSource = state.searchType === "album" ? `${source}_album` : source;
+        const results = await API.search(state.searchKeyword, apiSource, 20, state.searchPage);
 
         if (results.length > 0) {
             state.searchResults = [...state.searchResults, ...results];

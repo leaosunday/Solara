@@ -140,10 +140,23 @@
                     </button>
                     <div id="sourceMenu" class="source-menu" role="listbox" aria-labelledby="sourceSelectButton"></div>
                 </div>
-                <button id="searchBtn" class="search-btn">
-                    <i class="fas fa-search"></i>
-                    <span>搜索</span>
-                </button>
+                <div class="search-btn-wrapper" id="searchBtnWrapper">
+                    <button id="searchBtn" class="search-btn" type="button" aria-haspopup="menu" aria-expanded="false">
+                        <i class="fas fa-search"></i>
+                        <span id="searchBtnText">搜索歌曲</span>
+                        <i class="fas fa-chevron-down caret-icon" aria-hidden="true"></i>
+                    </button>
+                    <div id="searchTypeMenu" class="search-type-menu" role="menu">
+                        <div class="search-type-option" data-type="song" role="menuitem">
+                            <i class="fas fa-music"></i>
+                            <span>搜索歌曲</span>
+                        </div>
+                        <div class="search-type-option" data-type="album" role="menuitem">
+                            <i class="fas fa-compact-disc"></i>
+                            <span>搜索专辑</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div id="searchResults" class="search-results">
                 <div class="search-results-toolbar">
