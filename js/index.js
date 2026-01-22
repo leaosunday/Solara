@@ -4740,8 +4740,7 @@ async function downloadWithQuality(event, index, type, quality, isNas = false) {
             await downloadSong(song, quality);
         }
     } catch (error) {
-        console.error("下载失败:", error);
-        showNotification("下载失败，请稍后重试", "error");
+        throw error; // 重新抛出错误，以便调用者（如批量下载）能捕获失败
     }
 }
 
@@ -6641,6 +6640,7 @@ async function downloadSong(song, quality = "320") {
     } catch (error) {
         console.error("下载失败:", error);
         showNotification("下载失败，请稍后重试", "error");
+        throw error; // 重新抛出错误，以便调用者（如批量下载）能捕获失败
     }
 }
 
@@ -6691,6 +6691,7 @@ async function downloadSongToNas(song, quality = "320") {
     } catch (error) {
         console.error("NAS 下载失败:", error);
         showNotification("推送至 NAS 失败，请检查服务器连接", "error");
+        throw error; // 重新抛出错误，以便调用者（如批量下载）能捕获失败
     }
 }
 
