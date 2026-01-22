@@ -36,6 +36,11 @@ const dom = {
     importSelectedBtn: document.getElementById("importSelectedBtn"),
     importSelectedCount: document.getElementById("importSelectedCount"),
     importSelectedMenu: document.getElementById("importSelectedMenu"),
+    downloadSelectedBtn: document.getElementById("downloadSelectedBtn"),
+    downloadSelectedCount: document.getElementById("downloadSelectedCount"),
+    downloadSelectedMenu: document.getElementById("downloadSelectedMenu"),
+    batchDownload: document.getElementById("batchDownload"),
+    batchDownloadNas: document.getElementById("batchDownloadNas"),
     selectAllBtn: document.getElementById("selectAllBtn"),
     importToPlaylist: document.getElementById("importToPlaylist"),
     importToFavorites: document.getElementById("importToFavorites"),
@@ -966,6 +971,7 @@ const state = {
 };
 
 let importSelectedMenuOutsideHandler = null;
+let downloadSelectedMenuOutsideHandler = null;
 
 if (state.currentList === "favorite" && (!Array.isArray(state.favoriteSongs) || state.favoriteSongs.length === 0)) {
     state.currentList = "playlist";
@@ -3360,6 +3366,38 @@ function setupInteractions() {
         });
     }
 
+    if (dom.downloadSelectedBtn) {
+        dom.downloadSelectedBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (dom.downloadSelectedBtn.disabled) {
+                return;
+            }
+            const isOpen = dom.downloadSelectedMenu && !dom.downloadSelectedMenu.hasAttribute("hidden");
+            if (isOpen) {
+                closeDownloadSelectedMenu();
+            } else {
+                openDownloadSelectedMenu();
+            }
+        });
+    }
+
+    if (dom.batchDownload) {
+        dom.batchDownload.addEventListener("click", (event) => {
+            event.preventDefault();
+            closeDownloadSelectedMenu();
+            batchDownloadSongs(false);
+        });
+    }
+
+    if (dom.batchDownloadNas) {
+        dom.batchDownloadNas.addEventListener("click", (event) => {
+            event.preventDefault();
+            closeDownloadSelectedMenu();
+            batchDownloadSongs(true);
+        });
+    }
+
     if (dom.showPlaylistBtn) {
         dom.showPlaylistBtn.addEventListener("click", () => {
             if (isMobileView) {
@@ -3937,24 +3975,40 @@ function updateSearchResultSelectionUI(index) {
 }
 
 function updateImportSelectedButton() {
-    const button = dom.importSelectedBtn;
-    if (!button) {
+    const importBtn = dom.importSelectedBtn;
+    const downloadBtn = dom.downloadSelectedBtn;
+    if (!importBtn || !downloadBtn) {
         return;
     }
     ensureSelectedSearchResultsSet();
     const count = state.selectedSearchResults.size;
-    button.disabled = count === 0;
-    button.setAttribute("aria-disabled", count === 0 ? "true" : "false");
+    
+    // 更新导入按钮
+    importBtn.disabled = count === 0;
+    importBtn.setAttribute("aria-disabled", count === 0 ? "true" : "false");
+    const importCountLabel = dom.importSelectedCount;
+    if (importCountLabel) {
+        importCountLabel.textContent = count > 0 ? `(${count})` : "";
+    }
+    const importLabel = count > 0 ? `导入已选 (${count})` : "导入已选";
+    importBtn.title = importLabel;
+    importBtn.setAttribute("aria-label", count > 0 ? `导入已选 ${count} 首歌曲` : "导入已选");
+
+    // 更新下载按钮
+    downloadBtn.disabled = count === 0;
+    downloadBtn.setAttribute("aria-disabled", count === 0 ? "true" : "false");
+    const downloadCountLabel = dom.downloadSelectedCount;
+    if (downloadCountLabel) {
+        downloadCountLabel.textContent = count > 0 ? `(${count})` : "";
+    }
+    const downloadLabel = count > 0 ? `下载已选 (${count})` : "下载已选";
+    downloadBtn.title = downloadLabel;
+    downloadBtn.setAttribute("aria-label", count > 0 ? `下载已选 ${count} 首歌曲` : "下载已选");
+
     if (count === 0) {
         closeImportSelectedMenu();
+        closeDownloadSelectedMenu();
     }
-    const countLabel = dom.importSelectedCount;
-    if (countLabel) {
-        countLabel.textContent = count > 0 ? `(${count})` : "";
-    }
-    const label = count > 0 ? `导入已选 (${count})` : "导入已选";
-    button.title = label;
-    button.setAttribute("aria-label", count > 0 ? `导入已选 ${count} 首歌曲` : "导入已选");
 
     // 同步更新全选按钮状态
     const selectAllBtn = dom.selectAllBtn;
@@ -3966,6 +4020,88 @@ function updateImportSelectedButton() {
         selectAllBtn.querySelector("i").className = allSelected ? "fas fa-times-circle" : "fas fa-check-double";
         selectAllBtn.disabled = totalVisible === 0;
     }
+}
+
+function openDownloadSelectedMenu() {
+    if (!dom.downloadSelectedMenu || !dom.downloadSelectedBtn || dom.downloadSelectedBtn.disabled) {
+        return;
+    }
+    dom.downloadSelectedMenu.removeAttribute("hidden");
+    dom.downloadSelectedBtn.setAttribute("aria-expanded", "true");
+
+    downloadSelectedMenuOutsideHandler = (event) => {
+        if (!dom.downloadSelectedMenu || !dom.downloadSelectedBtn) {
+            return;
+        }
+        if (dom.downloadSelectedMenu.contains(event.target) || dom.downloadSelectedBtn.contains(event.target)) {
+            return;
+        }
+        closeDownloadSelectedMenu();
+    };
+
+    setTimeout(() => {
+        document.addEventListener("click", downloadSelectedMenuOutsideHandler);
+    }, 0);
+}
+
+function closeDownloadSelectedMenu() {
+    if (!dom.downloadSelectedMenu || !dom.downloadSelectedBtn) {
+        return;
+    }
+    if (!dom.downloadSelectedMenu.hasAttribute("hidden")) {
+        dom.downloadSelectedMenu.setAttribute("hidden", "");
+        dom.downloadSelectedBtn.setAttribute("aria-expanded", "false");
+    }
+    if (downloadSelectedMenuOutsideHandler) {
+        document.removeEventListener("click", downloadSelectedMenuOutsideHandler);
+        downloadSelectedMenuOutsideHandler = null;
+    }
+}
+
+async function batchDownloadSongs(isNas = false) {
+    ensureSelectedSearchResultsSet();
+    const count = state.selectedSearchResults.size;
+    if (count === 0) return;
+
+    const indices = Array.from(state.selectedSearchResults);
+    const songsToDownload = indices.map(idx => state.searchResults[idx]).filter(Boolean);
+
+    if (songsToDownload.length === 0) return;
+
+    const actionText = isNas ? "下载到 NAS" : "下载";
+    const confirmMessage = `确定要批量${actionText} ${songsToDownload.length} 首歌曲吗？`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    showNotification(`正在开始批量${actionText} ${songsToDownload.length} 首歌曲...`, "info");
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const song of songsToDownload) {
+        try {
+            if (isNas) {
+                await downloadSongToNas(song, "320");
+            } else {
+                await downloadSong(song, "320");
+            }
+            successCount++;
+        } catch (error) {
+            console.error(`${actionText}失败: ${song.name}`, error);
+            failCount++;
+        }
+        // 添加一点延迟避免请求过快
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    if (failCount === 0) {
+        showNotification(`批量${actionText}完成！共成功 ${successCount} 首。`, "success");
+    } else {
+        showNotification(`批量${actionText}结束。成功: ${successCount}, 失败: ${failCount}`, "info");
+    }
+
+    // 下载完成后清空选择
+    resetSelectedSearchResults();
 }
 
 function toggleSearchResultSelection(index) {
