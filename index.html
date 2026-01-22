@@ -382,6 +382,44 @@
                             >
                                 <i class="fas fa-plus-circle" aria-hidden="true"></i>
                             </button>
+                            <div class="import-dropdown">
+                                <button
+                                    id="mobileDownloadFavoritesBtn"
+                                    class="mobile-panel-action-btn"
+                                    type="button"
+                                    aria-label="下载收藏列表"
+                                    title="下载收藏列表"
+                                    aria-haspopup="menu"
+                                    aria-expanded="false"
+                                >
+                                    <i class="fas fa-download" aria-hidden="true"></i>
+                                </button>
+                                <div class="import-dropdown-menu" id="mobileDownloadFavoritesMenu" role="menu" hidden>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="128" data-nas="false">标准音质 (128k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="192" data-nas="false">高音质 (192k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="320" data-nas="false">超高音质 (320k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="999" data-nas="false">无损音质</button>
+                                </div>
+                            </div>
+                            <div class="import-dropdown">
+                                <button
+                                    id="mobileDownloadFavoritesNasBtn"
+                                    class="mobile-panel-action-btn"
+                                    type="button"
+                                    aria-label="下载收藏列表到NAS"
+                                    title="下载收藏列表到NAS"
+                                    aria-haspopup="menu"
+                                    aria-expanded="false"
+                                >
+                                    <i class="fas fa-server" aria-hidden="true"></i>
+                                </button>
+                                <div class="import-dropdown-menu" id="mobileDownloadFavoritesNasMenu" role="menu" hidden>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="128" data-nas="true">标准音质 (128k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="192" data-nas="true">高音质 (192k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="320" data-nas="true">超高音质 (320k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="999" data-nas="true">无损音质</button>
+                                </div>
+                            </div>
                             <button
                                 id="mobileImportFavoritesBtn"
                                 class="mobile-panel-action-btn"
@@ -555,6 +593,44 @@
                                 accept="application/json"
                                 hidden
                             />
+                            <div class="import-dropdown">
+                                <button
+                                    class="playlist-action-btn playlist-action-btn--download"
+                                    id="downloadFavoritesBtn"
+                                    type="button"
+                                    title="下载收藏列表"
+                                    aria-label="下载收藏列表"
+                                    aria-haspopup="menu"
+                                    aria-expanded="false"
+                                >
+                                    <i class="fas fa-download" aria-hidden="true"></i>
+                                </button>
+                                <div class="import-dropdown-menu" id="downloadFavoritesMenu" role="menu" hidden>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="128" data-nas="false">标准音质 (128k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="192" data-nas="false">高音质 (192k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="320" data-nas="false">超高音质 (320k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="999" data-nas="false">无损音质</button>
+                                </div>
+                            </div>
+                            <div class="import-dropdown">
+                                <button
+                                    class="playlist-action-btn playlist-action-btn--download-nas"
+                                    id="downloadFavoritesNasBtn"
+                                    type="button"
+                                    title="下载收藏列表到NAS"
+                                    aria-label="下载收藏列表到NAS"
+                                    aria-haspopup="menu"
+                                    aria-expanded="false"
+                                >
+                                    <i class="fas fa-server" aria-hidden="true"></i>
+                                </button>
+                                <div class="import-dropdown-menu" id="downloadFavoritesNasMenu" role="menu" hidden>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="128" data-nas="true">标准音质 (128k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="192" data-nas="true">高音质 (192k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="320" data-nas="true">超高音质 (320k)</button>
+                                    <button class="import-dropdown-item favorites-download-item" type="button" data-quality="999" data-nas="true">无损音质</button>
+                                </div>
+                            </div>
                             <button
                                 class="playlist-action-btn"
                                 id="importFavoritesBtn"

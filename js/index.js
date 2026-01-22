@@ -49,6 +49,10 @@ const dom = {
     downloadPlaylistMenu: document.getElementById("downloadPlaylistMenu"),
     downloadPlaylistNasBtn: document.getElementById("downloadPlaylistNasBtn"),
     downloadPlaylistNasMenu: document.getElementById("downloadPlaylistNasMenu"),
+    downloadFavoritesBtn: document.getElementById("downloadFavoritesBtn"),
+    downloadFavoritesMenu: document.getElementById("downloadFavoritesMenu"),
+    downloadFavoritesNasBtn: document.getElementById("downloadFavoritesNasBtn"),
+    downloadFavoritesNasMenu: document.getElementById("downloadFavoritesNasMenu"),
     exportPlaylistBtn: document.getElementById("exportPlaylistBtn"),
     importPlaylistInput: document.getElementById("importPlaylistInput"),
     clearPlaylistBtn: document.getElementById("clearPlaylistBtn"),
@@ -57,6 +61,10 @@ const dom = {
     mobileDownloadPlaylistMenu: document.getElementById("mobileDownloadPlaylistMenu"),
     mobileDownloadPlaylistNasBtn: document.getElementById("mobileDownloadPlaylistNasBtn"),
     mobileDownloadPlaylistNasMenu: document.getElementById("mobileDownloadPlaylistNasMenu"),
+    mobileDownloadFavoritesBtn: document.getElementById("mobileDownloadFavoritesBtn"),
+    mobileDownloadFavoritesMenu: document.getElementById("mobileDownloadFavoritesMenu"),
+    mobileDownloadFavoritesNasBtn: document.getElementById("mobileDownloadFavoritesNasBtn"),
+    mobileDownloadFavoritesNasMenu: document.getElementById("mobileDownloadFavoritesNasMenu"),
     mobileExportPlaylistBtn: document.getElementById("mobileExportPlaylistBtn"),
     playModeBtn: document.getElementById("playModeBtn"),
     playPauseBtn: document.getElementById("playPauseBtn"),
@@ -3369,6 +3377,64 @@ function setupInteractions() {
         dom.clearFavoritesBtn.addEventListener("click", clearFavorites);
     }
 
+    if (dom.downloadFavoritesBtn) {
+        dom.downloadFavoritesBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isVisible = !dom.downloadFavoritesMenu.hidden;
+            hideAllPlaylistDownloadMenus();
+            if (!isVisible) {
+                dom.downloadFavoritesMenu.hidden = false;
+                dom.downloadFavoritesBtn.setAttribute("aria-expanded", "true");
+            }
+        });
+    }
+
+    if (dom.downloadFavoritesNasBtn) {
+        dom.downloadFavoritesNasBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isVisible = !dom.downloadFavoritesNasMenu.hidden;
+            hideAllPlaylistDownloadMenus();
+            if (!isVisible) {
+                dom.downloadFavoritesNasMenu.hidden = false;
+                dom.downloadFavoritesNasBtn.setAttribute("aria-expanded", "true");
+            }
+        });
+    }
+
+    if (dom.mobileDownloadFavoritesBtn) {
+        dom.mobileDownloadFavoritesBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isVisible = !dom.mobileDownloadFavoritesMenu.hidden;
+            hideAllPlaylistDownloadMenus();
+            if (!isVisible) {
+                dom.mobileDownloadFavoritesMenu.hidden = false;
+                dom.mobileDownloadFavoritesBtn.setAttribute("aria-expanded", "true");
+            }
+        });
+    }
+
+    if (dom.mobileDownloadFavoritesNasBtn) {
+        dom.mobileDownloadFavoritesNasBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isVisible = !dom.mobileDownloadFavoritesNasMenu.hidden;
+            hideAllPlaylistDownloadMenus();
+            if (!isVisible) {
+                dom.mobileDownloadFavoritesNasMenu.hidden = false;
+                dom.mobileDownloadFavoritesNasBtn.setAttribute("aria-expanded", "true");
+            }
+        });
+    }
+
+    // 收藏列表音质选择项点击事件
+    document.querySelectorAll(".favorites-download-item").forEach(item => {
+        item.addEventListener("click", (e) => {
+            const quality = e.target.dataset.quality;
+            const isNas = e.target.dataset.nas === "true";
+            downloadFavorites(isNas, quality);
+            hideAllPlaylistDownloadMenus();
+        });
+    });
+
     if (dom.mobileAddAllFavoritesBtn) {
         dom.mobileAddAllFavoritesBtn.addEventListener("click", addAllFavoritesToPlaylist);
     }
@@ -4161,7 +4227,11 @@ function hideAllPlaylistDownloadMenus() {
         { menu: dom.downloadPlaylistMenu, btn: dom.downloadPlaylistBtn },
         { menu: dom.downloadPlaylistNasMenu, btn: dom.downloadPlaylistNasBtn },
         { menu: dom.mobileDownloadPlaylistMenu, btn: dom.mobileDownloadPlaylistBtn },
-        { menu: dom.mobileDownloadPlaylistNasMenu, btn: dom.mobileDownloadPlaylistNasBtn }
+        { menu: dom.mobileDownloadPlaylistNasMenu, btn: dom.mobileDownloadPlaylistNasBtn },
+        { menu: dom.downloadFavoritesMenu, btn: dom.downloadFavoritesBtn },
+        { menu: dom.downloadFavoritesNasMenu, btn: dom.downloadFavoritesNasBtn },
+        { menu: dom.mobileDownloadFavoritesMenu, btn: dom.mobileDownloadFavoritesBtn },
+        { menu: dom.mobileDownloadFavoritesNasMenu, btn: dom.mobileDownloadFavoritesNasBtn }
     ];
 
     menus.forEach(({ menu, btn }) => {
@@ -4268,6 +4338,50 @@ async function downloadCurrentPlaylist(isNas = false, quality = "320") {
         showNotification(`播放列表批量${actionText}完成！共成功 ${successCount} 首。`, "success");
     } else {
         showNotification(`播放列表批量${actionText}结束。成功: ${successCount}, 失败: ${failCount}`, "info");
+    }
+}
+
+async function downloadFavorites(isNas = false, quality = "320") {
+    const songs = Array.isArray(state.favoriteSongs) ? state.favoriteSongs : [];
+    if (songs.length === 0) {
+        showNotification("收藏列表为空", "warning");
+        return;
+    }
+
+    const actionText = isNas ? "下载到 NAS" : "下载";
+    const qualityTextMap = {
+        "128": "标准 (128k)",
+        "192": "高音质 (192k)",
+        "320": "超高音质 (320k)",
+        "999": "无损"
+    };
+    const qualityText = qualityTextMap[quality] || quality;
+    
+    showNotification(`开始以 ${qualityText} 批量${actionText}收藏列表中的 ${songs.length} 首歌曲...`, "info");
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const song of songs) {
+        try {
+            if (isNas) {
+                await downloadSongToNas(song, quality);
+            } else {
+                await downloadSong(song, quality);
+            }
+            successCount++;
+        } catch (error) {
+            console.error(`${actionText}失败: ${song.name}`, error);
+            failCount++;
+        }
+        // 添加一点延迟避免请求过快
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    if (failCount === 0) {
+        showNotification(`收藏列表批量${actionText}完成！共成功 ${successCount} 首。`, "success");
+    } else {
+        showNotification(`收藏列表批量${actionText}结束。成功: ${successCount}, 失败: ${failCount}`, "info");
     }
 }
 
