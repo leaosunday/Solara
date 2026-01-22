@@ -571,8 +571,9 @@ function sanitizeStoredSearchState(data, defaultSource = SOURCE_OPTIONS[0].value
     const page = Number.isInteger(data.page) && data.page > 0 ? data.page : 1;
     const hasMore = typeof data.hasMore === "boolean" ? data.hasMore : true;
     const results = cloneSearchResults(data.results);
+    const selected = Array.isArray(data.selected) ? data.selected : [];
 
-    return { keyword, source, page, hasMore, results };
+    return { keyword, source, page, hasMore, results, selected };
 }
 
 function loadStoredPalettes() {
@@ -2046,7 +2047,8 @@ function hideSearchResults() {
         container.innerHTML = "";
     }
     state.renderedSearchCount = 0;
-    resetSelectedSearchResults();
+    // 修复：不要在这里重置选中状态，以便用户切回搜索时保留
+    // resetSelectedSearchResults();
     closeImportSelectedMenu();
 }
 
@@ -2057,6 +2059,8 @@ function createSearchStateSnapshot() {
         page: Number.isInteger(state.searchPage) && state.searchPage > 0 ? state.searchPage : 1,
         hasMore: Boolean(state.hasMoreResults),
         results: cloneSearchResults(state.searchResults),
+        // 修复：持久化选中状态
+        selected: Array.from(state.selectedSearchResults || [])
     };
 }
 
@@ -2081,6 +2085,12 @@ function restoreStateFromSnapshot(snapshot) {
     state.searchPage = sanitized.page;
     state.hasMoreResults = sanitized.hasMore;
     state.searchResults = cloneSearchResults(sanitized.results);
+    // 修复：恢复选中状态
+    if (Array.isArray(sanitized.selected)) {
+        state.selectedSearchResults = new Set(sanitized.selected);
+    } else {
+        state.selectedSearchResults = new Set();
+    }
     lastSearchStateCache = { ...sanitized, results: cloneSearchResults(sanitized.results) };
     safeSetLocalStorage("searchSource", state.searchSource);
     updateSourceLabel();
@@ -2102,6 +2112,8 @@ function restoreSearchResultsList() {
         reset: true,
         totalCount: results.length,
     });
+    // 修复：渲染后同步选中状态按钮 UI
+    updateImportSelectedButton();
 }
 
 function handleSearchInputFocus() {
@@ -4133,6 +4145,8 @@ function toggleSearchResultSelection(index) {
     }
     updateSearchResultSelectionUI(numericIndex);
     updateImportSelectedButton();
+    // 修复：同步到持久化状态
+    persistLastSearchState();
 }
 
 function selectAllSearchResults() {
@@ -4158,6 +4172,8 @@ function selectAllSearchResults() {
         updateSearchResultSelectionUI(i);
     }
     updateImportSelectedButton();
+    // 修复：同步到持久化状态
+    persistLastSearchState();
 }
 
 function resetSelectedSearchResults() {
@@ -4170,6 +4186,8 @@ function resetSelectedSearchResults() {
     state.selectedSearchResults.clear();
     indices.forEach(updateSearchResultSelectionUI);
     updateImportSelectedButton();
+    // 修复：同步到持久化状态
+    persistLastSearchState();
 }
 
 function closeImportSelectedMenu() {
@@ -4339,7 +4357,8 @@ function displaySearchResults(newItems, options = {}) {
     if (reset) {
         container.innerHTML = "";
         state.renderedSearchCount = 0;
-        resetSelectedSearchResults();
+        // 修复：不要在这里重置选中状态，由调用者决定何时重置（例如新搜索开始时）
+        // resetSelectedSearchResults();
     }
 
     const existingLoadMore = container.querySelector("#loadMoreBtn");
