@@ -45,10 +45,14 @@ const dom = {
     importToPlaylist: document.getElementById("importToPlaylist"),
     importToFavorites: document.getElementById("importToFavorites"),
     importPlaylistBtn: document.getElementById("importPlaylistBtn"),
+    downloadPlaylistBtn: document.getElementById("downloadPlaylistBtn"),
+    downloadPlaylistNasBtn: document.getElementById("downloadPlaylistNasBtn"),
     exportPlaylistBtn: document.getElementById("exportPlaylistBtn"),
     importPlaylistInput: document.getElementById("importPlaylistInput"),
     clearPlaylistBtn: document.getElementById("clearPlaylistBtn"),
     mobileImportPlaylistBtn: document.getElementById("mobileImportPlaylistBtn"),
+    mobileDownloadPlaylistBtn: document.getElementById("mobileDownloadPlaylistBtn"),
+    mobileDownloadPlaylistNasBtn: document.getElementById("mobileDownloadPlaylistNasBtn"),
     mobileExportPlaylistBtn: document.getElementById("mobileExportPlaylistBtn"),
     playModeBtn: document.getElementById("playModeBtn"),
     playPauseBtn: document.getElementById("playPauseBtn"),
@@ -3267,6 +3271,14 @@ function setupInteractions() {
         dom.exportPlaylistBtn.addEventListener("click", exportPlaylist);
     }
 
+    if (dom.downloadPlaylistBtn) {
+        dom.downloadPlaylistBtn.addEventListener("click", () => downloadCurrentPlaylist(false));
+    }
+
+    if (dom.downloadPlaylistNasBtn) {
+        dom.downloadPlaylistNasBtn.addEventListener("click", () => downloadCurrentPlaylist(true));
+    }
+
     if (dom.mobileImportPlaylistBtn && dom.importPlaylistInput) {
         dom.mobileImportPlaylistBtn.addEventListener("click", () => {
             dom.importPlaylistInput.value = "";
@@ -3276,6 +3288,14 @@ function setupInteractions() {
 
     if (dom.mobileExportPlaylistBtn) {
         dom.mobileExportPlaylistBtn.addEventListener("click", exportPlaylist);
+    }
+
+    if (dom.mobileDownloadPlaylistBtn) {
+        dom.mobileDownloadPlaylistBtn.addEventListener("click", () => downloadCurrentPlaylist(false));
+    }
+
+    if (dom.mobileDownloadPlaylistNasBtn) {
+        dom.mobileDownloadPlaylistNasBtn.addEventListener("click", () => downloadCurrentPlaylist(true));
     }
 
     if (dom.addAllFavoritesBtn) {
@@ -4133,6 +4153,47 @@ async function batchDownloadSongs(quality = "320", isNas = false) {
 
     // 下载完成后清空选择
     resetSelectedSearchResults();
+}
+
+/**
+ * 下载当前播放列表中的所有歌曲
+ * @param {boolean} isNas 是否下载到 NAS
+ */
+async function downloadCurrentPlaylist(isNas = false) {
+    const songs = Array.isArray(state.playlistSongs) ? state.playlistSongs : [];
+    if (songs.length === 0) {
+        showNotification("播放列表为空", "warning");
+        return;
+    }
+
+    const actionText = isNas ? "下载到 NAS" : "下载";
+    showNotification(`开始批量${actionText}播放列表中的 ${songs.length} 首歌曲...`, "info");
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const song of songs) {
+        try {
+            // 默认使用 320k 音质下载整个列表
+            if (isNas) {
+                await downloadSongToNas(song, "320");
+            } else {
+                await downloadSong(song, "320");
+            }
+            successCount++;
+        } catch (error) {
+            console.error(`${actionText}失败: ${song.name}`, error);
+            failCount++;
+        }
+        // 添加一点延迟避免请求过快
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    if (failCount === 0) {
+        showNotification(`播放列表批量${actionText}完成！共成功 ${successCount} 首。`, "success");
+    } else {
+        showNotification(`播放列表批量${actionText}结束。成功: ${successCount}, 失败: ${failCount}`, "info");
+    }
 }
 
 function toggleSearchResultSelection(index) {

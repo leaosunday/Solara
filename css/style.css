@@ -1158,6 +1158,20 @@ body.dark-mode .playlist-action-btn {
     color: var(--warning-color);
 }
 
+.playlist-action-btn--download:hover:not(:disabled),
+.playlist-action-btn--download:focus-visible:not(:disabled) {
+    color: #3498db;
+    box-shadow: 0 14px 30px rgba(52, 152, 219, 0.25);
+    border-color: rgba(52, 152, 219, 0.4);
+}
+
+.playlist-action-btn--download-nas:hover:not(:disabled),
+.playlist-action-btn--download-nas:focus-visible:not(:disabled) {
+    color: #9b59b6;
+    box-shadow: 0 14px 30px rgba(155, 89, 182, 0.25);
+    border-color: rgba(155, 89, 182, 0.4);
+}
+
 .playlist-action-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;

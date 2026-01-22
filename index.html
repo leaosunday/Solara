@@ -302,6 +302,24 @@
                     <div class="mobile-panel-actions">
                         <div class="mobile-actions-group" id="mobilePlaylistActions" role="group" aria-label="播放列表操作" aria-hidden="false">
                             <button
+                                id="mobileDownloadPlaylistBtn"
+                                class="mobile-panel-action-btn"
+                                type="button"
+                                aria-label="下载播放列表"
+                                title="下载播放列表"
+                            >
+                                <i class="fas fa-download" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                id="mobileDownloadPlaylistNasBtn"
+                                class="mobile-panel-action-btn"
+                                type="button"
+                                aria-label="下载播放列表到NAS"
+                                title="下载播放列表到NAS"
+                            >
+                                <i class="fas fa-server" aria-hidden="true"></i>
+                            </button>
+                            <button
                                 id="mobileImportPlaylistBtn"
                                 class="mobile-panel-action-btn"
                                 type="button"
@@ -408,6 +426,24 @@
                                 accept="application/json"
                                 hidden
                             />
+                            <button
+                                class="playlist-action-btn playlist-action-btn--download"
+                                id="downloadPlaylistBtn"
+                                type="button"
+                                title="下载播放列表"
+                                aria-label="下载播放列表"
+                            >
+                                <i class="fas fa-download" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                class="playlist-action-btn playlist-action-btn--download-nas"
+                                id="downloadPlaylistNasBtn"
+                                type="button"
+                                title="下载播放列表到NAS"
+                                aria-label="下载播放列表到NAS"
+                            >
+                                <i class="fas fa-server" aria-hidden="true"></i>
+                            </button>
                             <button
                                 class="playlist-action-btn playlist-action-btn--import"
                                 id="importPlaylistBtn"
