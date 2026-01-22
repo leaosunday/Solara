@@ -496,7 +496,7 @@ body.background-transitioning .background-stage__layer--transition {
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
-    background: rgba(255, 255, 255, 0.98);
+    background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
@@ -507,7 +507,7 @@ body.background-transitioning .background-stage__layer--transition {
 }
 
 .dark-mode .import-dropdown-menu {
-    background: rgba(28, 28, 28, 0.98);
+    background: #1c1c1c;
     border-color: rgba(255, 255, 255, 0.12);
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
@@ -553,7 +553,7 @@ body.background-transitioning .background-stage__layer--transition {
     top: 0;
     left: 100%;
     margin-left: 2px;
-    background: rgba(255, 255, 255, 0.98);
+    background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
@@ -567,7 +567,7 @@ body.background-transitioning .background-stage__layer--transition {
 }
 
 .dark-mode .import-submenu {
-    background: rgba(28, 28, 28, 0.98);
+    background: #1c1c1c;
     border-color: rgba(255, 255, 255, 0.12);
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
@@ -1156,6 +1156,57 @@ body.dark-mode .playlist-action-btn {
     filter: brightness(1.05);
     box-shadow: 0 16px 32px rgba(231, 76, 60, 0.28);
     color: var(--warning-color);
+}
+
+/* 播放列表下载按钮容器 */
+.playlist-actions-tray .import-dropdown,
+.mobile-actions-group .import-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* 播放列表下载下拉菜单 */
+.playlist-actions-tray .import-dropdown-menu,
+.mobile-actions-group .import-dropdown-menu {
+    position: absolute;
+    top: 100%; /* 默认向下展开 */
+    right: 0;
+    margin-top: 8px;
+    background-color: #ffffff !important;
+    background: #ffffff !important; /* 双重保险 */
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    padding: 8px 0;
+    min-width: 160px;
+    z-index: 20000;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.playlist-actions-tray .import-dropdown-menu[hidden],
+.mobile-actions-group .import-dropdown-menu[hidden] {
+    display: none !important;
+}
+
+.dark-mode .playlist-actions-tray .import-dropdown-menu,
+.dark-mode .mobile-actions-group .import-dropdown-menu {
+    background-color: #1e293b !important; /* 强制使用深色背景 */
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+/* 移动端特殊处理，因为按钮在底部面板，需要向上展开 */
+.mobile-actions-group .import-dropdown-menu {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 12px;
+    right: 50%;
+    transform: translateX(50%);
 }
 
 .playlist-action-btn--download:hover:not(:disabled),

@@ -46,13 +46,17 @@ const dom = {
     importToFavorites: document.getElementById("importToFavorites"),
     importPlaylistBtn: document.getElementById("importPlaylistBtn"),
     downloadPlaylistBtn: document.getElementById("downloadPlaylistBtn"),
+    downloadPlaylistMenu: document.getElementById("downloadPlaylistMenu"),
     downloadPlaylistNasBtn: document.getElementById("downloadPlaylistNasBtn"),
+    downloadPlaylistNasMenu: document.getElementById("downloadPlaylistNasMenu"),
     exportPlaylistBtn: document.getElementById("exportPlaylistBtn"),
     importPlaylistInput: document.getElementById("importPlaylistInput"),
     clearPlaylistBtn: document.getElementById("clearPlaylistBtn"),
     mobileImportPlaylistBtn: document.getElementById("mobileImportPlaylistBtn"),
     mobileDownloadPlaylistBtn: document.getElementById("mobileDownloadPlaylistBtn"),
+    mobileDownloadPlaylistMenu: document.getElementById("mobileDownloadPlaylistMenu"),
     mobileDownloadPlaylistNasBtn: document.getElementById("mobileDownloadPlaylistNasBtn"),
+    mobileDownloadPlaylistNasMenu: document.getElementById("mobileDownloadPlaylistNasMenu"),
     mobileExportPlaylistBtn: document.getElementById("mobileExportPlaylistBtn"),
     playModeBtn: document.getElementById("playModeBtn"),
     playPauseBtn: document.getElementById("playPauseBtn"),
@@ -3272,12 +3276,43 @@ function setupInteractions() {
     }
 
     if (dom.downloadPlaylistBtn) {
-        dom.downloadPlaylistBtn.addEventListener("click", () => downloadCurrentPlaylist(false));
+        dom.downloadPlaylistBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isVisible = !dom.downloadPlaylistMenu.hidden;
+            hideAllPlaylistDownloadMenus();
+            if (!isVisible) {
+                dom.downloadPlaylistMenu.hidden = false;
+                dom.downloadPlaylistBtn.setAttribute("aria-expanded", "true");
+            }
+        });
     }
 
     if (dom.downloadPlaylistNasBtn) {
-        dom.downloadPlaylistNasBtn.addEventListener("click", () => downloadCurrentPlaylist(true));
+        dom.downloadPlaylistNasBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isVisible = !dom.downloadPlaylistNasMenu.hidden;
+            hideAllPlaylistDownloadMenus();
+            if (!isVisible) {
+                dom.downloadPlaylistNasMenu.hidden = false;
+                dom.downloadPlaylistNasBtn.setAttribute("aria-expanded", "true");
+            }
+        });
     }
+
+    // 播放列表音质选择项点击事件
+    document.querySelectorAll(".playlist-download-item").forEach(item => {
+        item.addEventListener("click", (e) => {
+            const quality = e.target.dataset.quality;
+            const isNas = e.target.dataset.nas === "true";
+            downloadCurrentPlaylist(isNas, quality);
+            hideAllPlaylistDownloadMenus();
+        });
+    });
+
+    // 点击外部关闭播放列表下载菜单
+    document.addEventListener("click", () => {
+        hideAllPlaylistDownloadMenus();
+    });
 
     if (dom.mobileImportPlaylistBtn && dom.importPlaylistInput) {
         dom.mobileImportPlaylistBtn.addEventListener("click", () => {
@@ -3291,11 +3326,27 @@ function setupInteractions() {
     }
 
     if (dom.mobileDownloadPlaylistBtn) {
-        dom.mobileDownloadPlaylistBtn.addEventListener("click", () => downloadCurrentPlaylist(false));
+        dom.mobileDownloadPlaylistBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isVisible = !dom.mobileDownloadPlaylistMenu.hidden;
+            hideAllPlaylistDownloadMenus();
+            if (!isVisible) {
+                dom.mobileDownloadPlaylistMenu.hidden = false;
+                dom.mobileDownloadPlaylistBtn.setAttribute("aria-expanded", "true");
+            }
+        });
     }
 
     if (dom.mobileDownloadPlaylistNasBtn) {
-        dom.mobileDownloadPlaylistNasBtn.addEventListener("click", () => downloadCurrentPlaylist(true));
+        dom.mobileDownloadPlaylistNasBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isVisible = !dom.mobileDownloadPlaylistNasMenu.hidden;
+            hideAllPlaylistDownloadMenus();
+            if (!isVisible) {
+                dom.mobileDownloadPlaylistNasMenu.hidden = false;
+                dom.mobileDownloadPlaylistNasBtn.setAttribute("aria-expanded", "true");
+            }
+        });
     }
 
     if (dom.addAllFavoritesBtn) {
@@ -4105,6 +4156,22 @@ function closeDownloadSelectedMenu() {
     }
 }
 
+function hideAllPlaylistDownloadMenus() {
+    const menus = [
+        { menu: dom.downloadPlaylistMenu, btn: dom.downloadPlaylistBtn },
+        { menu: dom.downloadPlaylistNasMenu, btn: dom.downloadPlaylistNasBtn },
+        { menu: dom.mobileDownloadPlaylistMenu, btn: dom.mobileDownloadPlaylistBtn },
+        { menu: dom.mobileDownloadPlaylistNasMenu, btn: dom.mobileDownloadPlaylistNasBtn }
+    ];
+
+    menus.forEach(({ menu, btn }) => {
+        if (menu && !menu.hidden) {
+            menu.hidden = true;
+            btn?.setAttribute("aria-expanded", "false");
+        }
+    });
+}
+
 async function batchDownloadSongs(quality = "320", isNas = false) {
     ensureSelectedSearchResultsSet();
     const count = state.selectedSearchResults.size;
@@ -4158,8 +4225,9 @@ async function batchDownloadSongs(quality = "320", isNas = false) {
 /**
  * 下载当前播放列表中的所有歌曲
  * @param {boolean} isNas 是否下载到 NAS
+ * @param {string} quality 音质
  */
-async function downloadCurrentPlaylist(isNas = false) {
+async function downloadCurrentPlaylist(isNas = false, quality = "320") {
     const songs = Array.isArray(state.playlistSongs) ? state.playlistSongs : [];
     if (songs.length === 0) {
         showNotification("播放列表为空", "warning");
@@ -4167,18 +4235,25 @@ async function downloadCurrentPlaylist(isNas = false) {
     }
 
     const actionText = isNas ? "下载到 NAS" : "下载";
-    showNotification(`开始批量${actionText}播放列表中的 ${songs.length} 首歌曲...`, "info");
+    const qualityTextMap = {
+        "128": "标准 (128k)",
+        "192": "高音质 (192k)",
+        "320": "超高音质 (320k)",
+        "999": "无损"
+    };
+    const qualityText = qualityTextMap[quality] || quality;
+    
+    showNotification(`开始以 ${qualityText} 批量${actionText}播放列表中的 ${songs.length} 首歌曲...`, "info");
 
     let successCount = 0;
     let failCount = 0;
 
     for (const song of songs) {
         try {
-            // 默认使用 320k 音质下载整个列表
             if (isNas) {
-                await downloadSongToNas(song, "320");
+                await downloadSongToNas(song, quality);
             } else {
-                await downloadSong(song, "320");
+                await downloadSong(song, quality);
             }
             successCount++;
         } catch (error) {
