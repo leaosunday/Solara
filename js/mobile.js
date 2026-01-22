@@ -168,6 +168,9 @@
             }
 
             const target = event.target;
+            if (target && target.tagName === "A" && target.hasAttribute("download")) {
+                return;
+            }
             if (dom.mobilePanel && (dom.mobilePanel === target || dom.mobilePanel.contains(target))) {
                 return;
             }
@@ -177,7 +180,11 @@
             if (dom.playerQualityMenu && dom.playerQualityMenu.contains(target)) {
                 return;
             }
-            if (target && typeof target.closest === "function" && target.closest(".quality-menu")) {
+            if (target && typeof target.closest === "function" && (
+                target.closest(".quality-menu") || 
+                target.closest(".dynamic-quality-menu") || 
+                target.closest(".nas-quality-menu")
+            )) {
                 return;
             }
 

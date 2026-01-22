@@ -3478,7 +3478,10 @@ function setupInteractions() {
     // 修复：点击搜索区域外部时隐藏搜索结果
     document.addEventListener("click", (e) => {
         const searchArea = document.querySelector(".search-area");
-        if (searchArea && !searchArea.contains(e.target) && state.isSearchMode) {
+        const isDynamicMenu = e.target.closest(".dynamic-quality-menu") || e.target.closest(".nas-quality-menu");
+        const isDownloadLink = e.target.tagName === "A" && e.target.hasAttribute("download");
+        
+        if (searchArea && !searchArea.contains(e.target) && !isDynamicMenu && !isDownloadLink && state.isSearchMode) {
             debugLog("点击搜索区域外部，隐藏搜索结果");
             hideSearchResults();
         }
@@ -4489,49 +4492,6 @@ async function downloadWithQuality(event, index, type, quality, isNas = false) {
     } catch (error) {
         console.error("下载失败:", error);
         showNotification("下载失败，请稍后重试", "error");
-    }
-}
-
-// 新增：下载歌曲到 NAS
-async function downloadSongToNas(song, quality = "320") {
-    try {
-        showNotification("正在请求 NAS 下载...");
-        const audioUrl = API.getSongUrl(song, quality);
-        const audioData = await API.fetchJson(audioUrl);
-
-        if (audioData && audioData.url) {
-            const url = audioData.url;
-            let fileExtension = "mp3";
-            try {
-                const urlObj = new URL(url);
-                const pathname = urlObj.pathname;
-                const ext = pathname.split(".").pop().toLowerCase();
-                if (ext && ["mp3", "flac", "m4a", "wav", "ogg"].includes(ext)) {
-                    fileExtension = ext;
-                }
-            } catch (e) {}
-
-            const filename = `${song.name} - ${Array.isArray(song.artist) ? song.artist.join(", ") : song.artist}.${fileExtension}`;
-            const picUrl = API.getPicUrl(song);
-
-            const response = await fetch("/api/nas-download", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url, filename, song, picUrl }),
-            });
-
-            const result = await response.json();
-            if (result.success) {
-                showNotification("NAS 下载任务已开始", "success");
-            } else {
-                throw new Error(result.error || "NAS 下载失败");
-            }
-        } else {
-            throw new Error("无法获取下载地址");
-        }
-    } catch (error) {
-        console.error("NAS 下载失败:", error);
-        showNotification("NAS 下载失败，请检查后端配置", "error");
     }
 }
 
@@ -6396,6 +6356,7 @@ async function downloadSong(song, quality = "320") {
                 const link = document.createElement("a");
                 link.href = blobUrl;
                 link.download = filename;
+                link.addEventListener("click", e => e.stopPropagation());
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -6417,6 +6378,7 @@ async function downloadSong(song, quality = "320") {
                 const link = document.createElement("a");
                 link.href = blobUrl;
                 link.download = filename;
+                link.addEventListener("click", e => e.stopPropagation());
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
